@@ -17,22 +17,57 @@ public class Player implements cc2.sim.Player {
 	{
 		// check if first try of given cutter length
 		Point[] cutter = new Point [length];
-		if (row_2.length != cutter.length - 1) {
-			// save cutter length to check for retries
-			row_2 = new boolean [cutter.length - 1];
-			for (int i = 0 ; i != cutter.length ; ++i)
-				cutter[i] = new Point(i, 0);
-		} else {
-			// pick a random cell from 2nd row but not same
-			int i;
-			do {
-				i = gen.nextInt(cutter.length - 1);
-			} while (row_2[i]);
-			row_2[i] = true;
-			cutter[cutter.length - 1] = new Point(i, 1);
-			for (i = 0 ; i != cutter.length - 1 ; ++i)
-				cutter[i] = new Point(i, 0);
+		Map<Integer, List<Integer>> pairs = new HashMap<Integer, List<Integer>>();
+		
+		if (length == 11) {
+			pairs.put(0, Arrays.asList(0,3));
+			pairs.put(1, Arrays.asList(0, 1, 2, 3, 4));
+			pairs.put(2, Arrays.asList(1, 3));
+			pairs.put(3, Arrays.asList(3, 4));	
 		}
+
+		else if (length == 8) {
+			pairs.put(0, Arrays.asList(1, 2));
+			pairs.put(1, Arrays.asList(2, 3, 4));
+			pairs.put(2, Arrays.asList(0, 1, 2));
+		}
+
+		else {
+			pairs.put(0, Arrays.asList(0, 1));
+			pairs.put(1, Arrays.asList(1));
+			pairs.put(2, Arrays.asList(0, 1));
+
+			// if (row_2.length != cutter.length - 1) {
+			// // save cutter length to check for retries
+			// row_2 = new boolean [cutter.length - 1];
+			// for (int i = 0 ; i != cutter.length ; ++i)
+			// 	cutter[i] = new Point(i, 0);
+			// } else {
+			// 	// pick a random cell from 2nd row but not same
+			// 	int i;
+			// 	do {
+			// 		i = gen.nextInt(cutter.length - 1);
+			// 	} while (row_2[i]);
+			// 	row_2[i] = true;
+			// 	cutter[cutter.length - 1] = new Point(i, 1);
+			// 	for (i = 0 ; i != cutter.length - 1 ; ++i)
+			// 		cutter[i] = new Point(i, 0);
+			// }
+		}
+		
+		int i = 0;
+		while (i < cutter.length) {
+			for (Map.Entry<Integer, List<Integer>> pair: pairs.entrySet()) {
+				for (int j : pair.getValue()) {
+					cutter[i] = new Point(pair.getKey(), j);
+					i++;
+				}
+			}
+		}
+
+		for (i = 0; i < cutter.length; i++)
+			System.out.println(cutter[i].toString());
+
 		return new Shape(cutter);
 	}
 
