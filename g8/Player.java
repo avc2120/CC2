@@ -11,6 +11,7 @@ public class Player implements cc2.sim.Player {
 
 	private boolean[] row_2 = new boolean [0];
 
+	private static int offset = 0;
 	private Random gen = new Random();
 
 	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
@@ -21,6 +22,7 @@ public class Player implements cc2.sim.Player {
 			// save cutter length to check for retries
 			row_2 = new boolean [cutter.length - 1];
 			for (int i = 0 ; i != cutter.length ; ++i)
+				//points each piece occupies
 				cutter[i] = new Point(i, 0);
 		} else {
 			// pick a random cell from 2nd row but not same
@@ -40,6 +42,7 @@ public class Player implements cc2.sim.Player {
 	{
 		// prune larger shapes if initial move
 		if (dough.uncut()) {
+			offset = (int)((3.0/8)*dough.side());
 			int min = Integer.MAX_VALUE;
 			for (Shape s : shapes)
 				if (min > s.size())
@@ -49,9 +52,15 @@ public class Player implements cc2.sim.Player {
 					shapes[s] = null;
 		}
 		// find all valid cuts
+		int area = (dough.side() - 2*offset)*(dough.side()-2*offset);
+		if (percentCut(dough, offset, area) > 0.5 && offset >= 0)
+		{
+			offset = offset/2;
+		}
+
 		ArrayList <Move> moves = new ArrayList <Move> ();
-		for (int i = 0 ; i != dough.side() ; ++i)
-			for (int j = 0 ; j != dough.side() ; ++j) {
+		for (int i = offset ; i != dough.side()- offset ; ++i)
+			for (int j = offset; j != dough.side()-offset; ++j) {
 				Point p = new Point(i, j);
 				for (int si = 0 ; si != shapes.length ; ++si) {
 					if (shapes[si] == null) continue;
@@ -65,5 +74,21 @@ public class Player implements cc2.sim.Player {
 			}
 		// return a cut randomly
 		return moves.get(gen.nextInt(moves.size()));
+	}
+
+	private double percentCut(Dough dough, int offset, int area)
+	{
+		int num_cuts = 0;
+		for (int i = offset ; i != dough.side()- offset ; ++i)
+		{
+			for (int j = offset; j != dough.side()-offset; ++j) 
+			{
+				if (dough.uncut(i,j) == false)
+				{
+					num_cuts++;
+				}
+			}
+		}
+		return num_cuts/((double)area);
 	}
 }
