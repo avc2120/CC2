@@ -78,19 +78,37 @@ public class Player implements cc2.sim.Player {
 				if (shapes[s].size() != min)
 					shapes[s] = null;
 		}
+		
 		// find all valid cuts
-		int area = (dough.side() - 2*offset)*(dough.side()-2*offset);
-		if (percentCut(dough, offset, area) > 0.5 && offset >= 0)
-		{
-			offset = offset/2;
-		}
 
 		ArrayList <Move> moves = new ArrayList <Move> ();
-		for (int i = offset ; i != dough.side()- offset ; ++i)
-			for (int j = offset; j != dough.side()-offset; ++j) {
+		boolean large = false, med = false;
+		
+		// 11 piece
+			int area = (dough.side() - 2*offset)*(dough.side()-2*offset);
+			if (percentCut(dough, offset, area) > 0.5 && offset >= 0)
+			{
+				offset = offset/2;
+			}
+			moves = cutShapes(dough, 11, shapes, moves);
+			if (moves.isEmpty()) {
+				moves = cutShapes(dough, 8, shapes, moves);
+			}
+			if (moves.isEmpty()) {
+				moves = cutShapes(dough, 5, shapes, moves);
+			}
+
+		// return a cut randomly
+		return moves.get(gen.nextInt(moves.size()));
+	}
+
+	private ArrayList<Move> cutShapes(Dough dough, int index, Shape[] shapes, ArrayList<Move> moves) {
+		for (int i = offset ; i != dough.side() - offset ; ++i) {
+			for (int j = offset; j != dough.side() - offset; ++j) {
 				Point p = new Point(i, j);
 				for (int si = 0 ; si != shapes.length ; ++si) {
 					if (shapes[si] == null) continue;
+					if (shapes[si].size() != index) continue;
 					Shape[] rotations = shapes[si].rotations();
 					for (int ri = 0 ; ri != rotations.length ; ++ri) {
 						Shape s = rotations[ri];
@@ -99,10 +117,10 @@ public class Player implements cc2.sim.Player {
 					}
 				}
 			}
-		// return a cut randomly
-		return moves.get(gen.nextInt(moves.size()));
+		}
+		return moves;
 	}
-
+	
 	private double percentCut(Dough dough, int offset, int area)
 	{
 		int num_cuts = 0;
