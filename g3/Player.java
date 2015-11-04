@@ -139,16 +139,17 @@ public class Player implements cc2.sim.Player {
 		public ComparableMove(Move move, long key1, long key2) {
 			this.move = move;
 			this.key1 = key1;
+			this.key2 = key2;
 			this.randomized = gen.nextInt();
 		}
 
 		@Override
 		public int compareTo(ComparableMove o) {
-			int c = Long.compare(this.key1, o.key1);
+			int c = Long.compare(this.key2, o.key2);
 			if (c != 0) {
 				return c;
 			}
-			c = Long.compare(this.key2, o.key2);
+			c = Long.compare(this.key1, o.key1);
 			if (c != 0) {
 				return c;
 			}
