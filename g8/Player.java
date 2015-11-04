@@ -12,7 +12,7 @@ public class Player implements cc2.sim.Player {
 	private boolean[] row_2 = new boolean [0];
 	private static int offset = 0;
 	private Random gen = new Random();
-	private static boolean[][] dough_cache;
+	private static int[][] dough_cache;
 
 	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 	{
@@ -70,59 +70,85 @@ public class Player implements cc2.sim.Player {
 	{
 		// prune larger shapes if initial move
 		if (dough.uncut()) {
-			dough_cache = new boolean[dough.side()][dough.side()];
-			offset = 0;
+			dough_cache = new int[dough.side()][dough.side()];
 			int min = Integer.MAX_VALUE;
 			for (Shape s : shapes)
+
 				if (min > s.size())
 					min = s.size();
 			for (int s = 0 ; s != shapes.length ; ++s)
 				if (shapes[s].size() != min)
 					shapes[s] = null;
 		}
+		if(dough.countCut() ==5)
+		{
+			dough_cache = new int[dough.side()][dough.side()];
+		}
 
 		// find all valid cuts
-		ArrayList <Move> moves = new ArrayList <Move> ();
-		ArrayList<Point> opponent_move = getOpponentMove(dough);
-		updateDough(dough);
-		System.out.println(opponent_move.size());
-		Set<Point> neighbors = getNeighbors(opponent_move);
+		ArrayList <Move> moves = new ArrayList<Move>();
+		Set<Point> opponent_move = getOpponentMove(dough);
+		Set<Point> neighbors = new HashSet<Point>();
+		if(!opponent_move.isEmpty())
+			neighbors = getNeighbors(opponent_move);
+
 		if(moves.isEmpty())
 		{
+			neighbors = getNeighbors(opponent_move);
 			moves = destructOpponent(neighbors, dough, 11, shapes, moves);
+			while(moves.isEmpty() &&  neighbors.size() != 0 && neighbors.size() < dough.side()*dough.side())
+			{
+				neighbors.addAll(getNeighbors(neighbors));
+				moves = destructOpponent(neighbors, dough, 11, shapes, moves);
+			}
 		}
 		if(moves.isEmpty())
 		{
 			moves = cutShapes(dough, 11, shapes, moves);
 		}
+
 		if(moves.isEmpty())
 		{
+			neighbors = getNeighbors(opponent_move);
 			moves = destructOpponent(neighbors, dough, 8, shapes, moves);
+			while(moves.isEmpty() && neighbors.size() != 0 && neighbors.size() < dough.side()*dough.side())
+			{
+				neighbors.addAll(getNeighbors(neighbors));
+				moves = destructOpponent(neighbors, dough, 8, shapes, moves);
+			}
 		}
 		if(moves.isEmpty())
 		{
 			moves = cutShapes(dough, 8, shapes, moves);
 		}
+
 		if(moves.isEmpty())
 		{
+			neighbors = getNeighbors(opponent_move);
 			moves = destructOpponent(neighbors, dough, 5, shapes, moves);
+			while(moves.isEmpty() && neighbors.size()!= 0 && neighbors.size() < dough.side()*dough.side())
+			{
+				neighbors.addAll(getNeighbors(neighbors));
+				moves = destructOpponent(neighbors, dough, 5, shapes, moves);
+			}
 		}
 		if(moves.isEmpty())
 		{
 			moves = cutShapes(dough, 5, shapes, moves);
 		}
-		
+
+
 		Move myMove = moves.get(gen.nextInt(moves.size()));
 		Shape myShape = shapes[myMove.shape];
 		Iterator <Point> myPoints = myShape.iterator();
-		
 		while(myPoints.hasNext())
 		{
 			Point p = myPoints.next();
-			dough_cache[p.i][p.j] = true;
+			dough_cache[p.i][p.j] = 1;
 		}
 		return myMove;
 	}
+	
 	private ArrayList<Move> destructOpponent(Set<Point> neighbors, Dough dough, int index, Shape[] shapes, ArrayList<Move> moves)
 	{
 		for (Point p: neighbors)
@@ -161,46 +187,17 @@ public class Player implements cc2.sim.Player {
 		}
 		return moves;
 	}
-	
-	private double percentCut(Dough dough, int offset, int area)
-	{
-		int num_cuts = 0;
-		for (int i = offset ; i != dough.side()- offset ; ++i)
-		{
-			for (int j = offset; j != dough.side()-offset; ++j) 
-			{
-				if (dough.uncut(i,j) == false)
-				{
-					num_cuts++;
-				}
-			}
-		}
-		return num_cuts/((double)area);
-	}
 
-	private void updateDough(Dough dough)
+	private Set<Point> getOpponentMove(Dough dough)
 	{
+		Set<Point> opponent_moves = new HashSet<Point>();
 		for(int i = 0; i < dough.side(); i++)
 		{
 			for(int j = 0; j < dough.side(); j++)
 			{
-				if(dough_cache[i][j] == false && !dough.uncut(i,j))
+				if(dough_cache[i][j] == 0 && !dough.uncut(i,j))
 				{
-					dough_cache[i][j] = true;
-				}
-			}
-		}
-	}
-
-	private ArrayList<Point> getOpponentMove(Dough dough)
-	{
-		ArrayList<Point> opponent_moves = new ArrayList<Point>();
-		for(int i = 0; i < dough.side(); i++)
-		{
-			for(int j = 0; j < dough.side(); j++)
-			{
-				if(dough_cache[i][j] == false && !dough.uncut(i,j))
-				{
+					dough_cache[i][j] = 1;
 					opponent_moves.add(new Point(i,j));
 				}
 			}
@@ -208,7 +205,7 @@ public class Player implements cc2.sim.Player {
 		return opponent_moves;
 	}
 
-	private Set<Point> getNeighbors(ArrayList<Point> points)
+	private Set<Point> getNeighbors(Set<Point> points)
 	{
 		Set<Point> neighbors = new HashSet<Point>();
 		for(Point point: points)
@@ -218,22 +215,16 @@ public class Player implements cc2.sim.Player {
 		return neighbors;
 	}
 
-	private boolean isOpponent(ArrayList<Point> points, Shape[] opponent_shapes)
+	private void printDough()
 	{
-		if (points.isEmpty())
+		for(int i = 0; i < dough_cache.length; i++)
 		{
-			return false;
-		}
-		System.out.println("num points: " + points.size());
-		Shape shape = new Shape(points.toArray(new Point[points.size()]));
-		for (Shape s: opponent_shapes)
-		{
-			if (s.equals(shape))
+			for(int j = 0; j < dough_cache.length; j++)
 			{
-				return true;
+				System.out.print(dough_cache[i][j]);
 			}
+			System.out.print("\n");
 		}
-		return false;
-	
 	}
+
 }
