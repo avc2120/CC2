@@ -13,6 +13,8 @@ public class Player implements cc2.sim.Player {
 	private static int offset = 0;
 	private Random gen = new Random();
 	private static int[][] dough_cache;
+	private HashMap<Move, Shape> move_rotation = new HashMap<Move, Shape>();
+		private HashMap<Move, Point> move_point = new HashMap<Move, Point>();
 
 	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 	{
@@ -80,11 +82,11 @@ public class Player implements cc2.sim.Player {
 				if (shapes[s].size() != min)
 					shapes[s] = null;
 		}
-		if(dough.countCut() ==5)
+		//if other team starts, create dough after first move
+		if(dough.countCut() == 5)
 		{
 			dough_cache = new int[dough.side()][dough.side()];
 		}
-
 		// find all valid cuts
 		ArrayList <Move> moves = new ArrayList<Move>();
 		Set<Point> opponent_move = getOpponentMove(dough);
@@ -137,20 +139,20 @@ public class Player implements cc2.sim.Player {
 			moves = cutShapes(dough, 5, shapes, moves);
 		}
 
-
 		Move myMove = moves.get(gen.nextInt(moves.size()));
-		Shape myShape = shapes[myMove.shape];
-		Iterator <Point> myPoints = myShape.iterator();
-		while(myPoints.hasNext())
+		Shape myShape = move_rotation.get(myMove);
+		Point q = move_point.get(myMove);
+		Iterator<Point> pts = myShape.iterator();
+		while(pts.hasNext())
 		{
-			Point p = myPoints.next();
-			dough_cache[p.i][p.j] = 1;
+			Point p = pts.next();
+			dough_cache[p.i + q.i][p.j + q.j] = 1;
 		}
 		return myMove;
 	}
 	
 	private ArrayList<Move> destructOpponent(Set<Point> neighbors, Dough dough, int index, Shape[] shapes, ArrayList<Move> moves)
-	{
+	{	
 		for (Point p: neighbors)
 		{
 			for (int si = 0 ; si != shapes.length ; ++si) 
@@ -162,7 +164,12 @@ public class Player implements cc2.sim.Player {
 				{
 					Shape s = rotations[ri];
 					if (dough.cuts(s, p))
-						moves.add(new Move(si, ri, p));
+					{
+						Move cur_Move = new Move(si, ri, p);
+						moves.add(cur_Move);
+						move_rotation.put(cur_Move, rotations[ri]);
+						move_point.put(cur_Move, p);
+					}
 				}
 			}
 		}
@@ -180,7 +187,12 @@ public class Player implements cc2.sim.Player {
 					for (int ri = 0 ; ri != rotations.length ; ++ri) {
 						Shape s = rotations[ri];
 						if (dough.cuts(s, p))
-							moves.add(new Move(si, ri, p));
+						{
+							Move cur_Move = new Move(si, ri, p);
+							moves.add(cur_Move);
+							move_rotation.put(cur_Move, rotations[ri]);
+							move_point.put(cur_Move, p);
+						}
 					}
 				}
 			}
