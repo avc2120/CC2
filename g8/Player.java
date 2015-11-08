@@ -294,40 +294,40 @@ public class Player implements cc2.sim.Player {
 		int oddStep = 0;
 		List <Move> moves = new ArrayList <Move> ();
 
-		if (index == 11 && run == 1) {
-			for (int i = 1; i < dough.side(); i += 5) {
-				oddRow = oddRow ^ 1;
-				oddStep = 0;
-				for (int j = oddRow; j < dough.side(); j += (4 + oddStep)) {
-					oddStep = oddStep ^ 1;
-					Point p = new Point(i, j);
-					for (int si = 0 ; si != shapes.length ; ++si) {
+		// if (index == 11 && run == 1) {
+		// 	for (int i = 1; i < dough.side(); i += 5) {
+		// 		oddRow = oddRow ^ 1;
+		// 		oddStep = 0;
+		// 		for (int j = oddRow; j < dough.side(); j += (4 + oddStep)) {
+		// 			oddStep = oddStep ^ 1;
+		// 			Point p = new Point(i, j);
+		// 			for (int si = 0 ; si != shapes.length ; ++si) {
 
-						if (shapes[si] == null) continue;
-						if (shapes[si].size() != index) continue;
+		// 				if (shapes[si] == null) continue;
+		// 				if (shapes[si].size() != index) continue;
 
-						Shape[] rotations = shapes[si].rotations();
-						int ri;
-						if (oddStep == 1) 
-							ri = 2;
-						else
-							ri = 1;
-						Shape s = rotations[ri];
-						if (dough.cuts(s, p)) {
-							Move cur_Move = new Move(si, ri, p);
-							moves.add(cur_Move);
-							move_rotation.put(cur_Move, rotations[ri]);
-							move_point.put(cur_Move, p);
+		// 				Shape[] rotations = shapes[si].rotations();
+		// 				int ri;
+		// 				if (oddStep == 1) 
+		// 					ri = 2;
+		// 				else
+		// 					ri = 1;
+		// 				Shape s = rotations[ri];
+		// 				if (dough.cuts(s, p)) {
+		// 					Move cur_Move = new Move(si, ri, p);
+		// 					moves.add(cur_Move);
+		// 					move_rotation.put(cur_Move, rotations[ri]);
+		// 					move_point.put(cur_Move, p);
 
-						}
-					}
-				}
-			}
+		// 				}
+		// 			}
+		// 		}
+		// 	}
 
 
-		}
+		// }
 
-		else {
+		// else {
 			for (int i = 0; i < dough.side(); i++) {
 				for (int j = 0; j < dough.side(); j++) {
 					Point p = new Point(i, j);
@@ -351,7 +351,7 @@ public class Player implements cc2.sim.Player {
 					}
 				}
 			}
-		}
+		// }
 		return moves;
 	}
 
