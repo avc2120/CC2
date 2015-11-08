@@ -37,15 +37,15 @@ public class Player implements cc2.sim.Player {
 			}
 
 			else if (length == 8) {
-
-				pairs.put(0, Arrays.asList(0, 1));
-				pairs.put(1, Arrays.asList(0, 1, 2));
-				pairs.put(2, Arrays.asList(1, 2));
-				pairs.put(3, Arrays.asList(1));
+				pairs = createDynamicShape(opponent_shapes[0], 8);
+				//pairs.put(0, Arrays.asList(0, 1));
+				//pairs.put(1, Arrays.asList(0, 1, 2));
+				//pairs.put(2, Arrays.asList(1, 2));
+				//pairs.put(3, Arrays.asList(1));
 
 			}
 			else {
-				pairs = create5Shape(opponent_shapes[0]);
+				pairs = createDynamicShape(opponent_shapes[0], 5);
 			}
 			
 		}
@@ -287,7 +287,7 @@ public class Player implements cc2.sim.Player {
 	}
 
 	// returns Map<Integer, List<Integer>> fitting convex hull
-	private Map<Integer, List<Integer>> create5Shape(Shape opponent_shape) {
+	private Map<Integer, List<Integer>> createDynamicShape(Shape opponent_shape, int n) {
 
 		Iterator <Point> it = opponent_shape.iterator();
 		int minLength = Integer.MAX_VALUE;
@@ -311,9 +311,16 @@ public class Player implements cc2.sim.Player {
 			block[p.i][p.j] = true;
 		}
 
+		boolean[][] newblock = new boolean[maxLength + 4][maxWidth + 4];
 		for (int i = 0; i < block.length; i++) {
 			for (int j = 0; j < block[i].length; j++) {
-				System.out.print(block[i][j] + " ");
+				newblock[i + 2][j + 2] = block[i][j];
+			}
+		}
+		
+		for (int i = 0; i < newblock.length; i++) {
+			for (int j = 0; j < newblock[i].length; j++) {
+				System.out.print(newblock[i][j] + " ");
 			}
 			System.out.println();
 		}
@@ -321,14 +328,28 @@ public class Player implements cc2.sim.Player {
 		Set<Point> points = new HashSet<Point>();
 		System.out.println("maxwidth, maxlength: " + maxWidth + ", " + maxLength);
 		if (maxWidth == 0 || maxLength == 0) {
-			points.add(new Point(0, 0));
-			points.add(new Point(0, 1));
-			points.add(new Point(0, 2));
-			points.add(new Point(0, 3));
-			points.add(new Point(0, 4));
+			if (n == 5) {
+				points.add(new Point(0, 0));
+				points.add(new Point(0, 1));
+				points.add(new Point(0, 2));
+				points.add(new Point(0, 3));
+				points.add(new Point(0, 4));
+			}
+			else if (n == 8) {
+				points.add(new Point(0, 0));
+				points.add(new Point(0, 1));
+				points.add(new Point(0, 2));
+				points.add(new Point(0, 3));
+				points.add(new Point(0, 4));
+				points.add(new Point(0, 5));
+				points.add(new Point(0, 6));
+				points.add(new Point(0, 7));
+				
+			}
+			
 		}
 		else {
-			points = createShape(block, 5, points, 2);
+			points = createShape(newblock, n, points, 2);
 		}
 
 		Map<Integer, List<Integer>> rMap = new HashMap<Integer, List<Integer>>();
@@ -376,10 +397,11 @@ public class Player implements cc2.sim.Player {
 								cutout[i][j] = true;
 								points.add(p);
 							}
-							else {
+							else if (points.size() + 2 <= n){
 								Point p = new Point(i, j);
 								cutout[i][j] = true;
 								points.add(p);
+								
 								Point new_p = returnAdjPoint(cutout, points, i, j);
 								cutout[new_p.i][new_p.j] = true;
 								points.add(new_p);
