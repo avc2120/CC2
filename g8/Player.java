@@ -205,19 +205,17 @@ public class Player implements cc2.sim.Player {
 						}
 					}
 				}
-				if (valid)
+				Move myMove = nextMove;
+				Shape myShape = move_rotation.get(myMove);
+				Point q = move_point.get(myMove);
+				Iterator<Point> pts = myShape.iterator();
+				while(pts.hasNext())
 				{
-					Move myMove = nextMove;
-					Shape myShape = move_rotation.get(myMove);
-					Point q = move_point.get(myMove);
-					Iterator<Point> pts = myShape.iterator();
-					while(pts.hasNext())
-					{
-						Point p = pts.next();
-						dough_cache[p.i + q.i][p.j + q.j] = 1;
-					}
-					return nextMove;	
+					Point p = pts.next();
+					dough_cache[p.i + q.i][p.j + q.j] = 1;
 				}
+				return nextMove;	
+
 
 			}
 
