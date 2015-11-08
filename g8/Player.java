@@ -149,18 +149,6 @@ public class Player implements cc2.sim.Player {
 		return myMove;
 	}
 
-	public List<Move> getIntersection(List<Move> list1, List<Move> list2) {
-		List<Move> temp = new ArrayList<Move>();
-		for(Move m1: list1) {
-			for(Move m2: list2) {
-				if (m1.shape == m2.shape && m1.rotation == m2.rotation && m1.point.equals(m2.point)) {
-					temp.add(m1);
-				}
-			}	
-		}
-		return temp;
-	}
-
 	private List<Move> destructOpponent(Set<Point> neighbors, Dough dough, int index, Shape[] shapes, List<Move> moves) {	
 		for (Point p: neighbors) {
 			for (int si = 0 ; si != shapes.length ; ++si) {
