@@ -19,7 +19,7 @@ public class Player implements cc2.sim.Player {
 	private int run = 0;
 	private static int shapeIndex = 11;
 
-	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
+public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 	{
 		// check if first try of given cutter length
 		Point[] cutter = new Point [length];
@@ -37,17 +37,15 @@ public class Player implements cc2.sim.Player {
 			}
 
 			else if (length == 8) {
-
-				pairs.put(0, Arrays.asList(0, 1));
-				pairs.put(1, Arrays.asList(0, 1, 2));
-				pairs.put(2, Arrays.asList(1, 2));
-				pairs.put(3, Arrays.asList(1));
+				pairs = createDynamicShape(opponent_shapes[0], 8);
+				//pairs.put(0, Arrays.asList(0, 1));
+				//pairs.put(1, Arrays.asList(0, 1, 2));
+				//pairs.put(2, Arrays.asList(1, 2));
+				//pairs.put(3, Arrays.asList(1));
 
 			}
-
 			else {
-				System.out.println("11 cutter: " + opponent_shapes[0].toString());
-				pairs = create5Shape(opponent_shapes[0]);
+				pairs = createDynamicShape(opponent_shapes[0], 5);
 			}
 			
 		}
@@ -56,9 +54,6 @@ public class Player implements cc2.sim.Player {
 				pairs.put(0, Arrays.asList(0, 1));
 				pairs.put(1, Arrays.asList(1));
 				pairs.put(2, Arrays.asList(0, 1));
-				// pairs.put(0, Arrays.asList(0, 1, 2));
-				// pairs.put(1, Arrays.asList(2, 3));
-
 			}
 			else if (length == 8) {
 				pairs.put(0, Arrays.asList(0, 1, 2));
@@ -387,14 +382,31 @@ public class Player implements cc2.sim.Player {
 		}
 	}
 
-	private Map<Integer, List<Integer>> create5Shape(Shape opponent_shape) {
-		
+	private double percentCut(Dough dough, int offset, int area)
+	{
+		int num_cuts = 0;
+		for (int i = offset ; i != dough.side()- offset ; ++i)
+		{
+			for (int j = offset; j != dough.side()-offset; ++j) 
+			{
+				if (dough.uncut(i,j) == false)
+				{
+					num_cuts++;
+				}
+			}
+		}
+		return num_cuts/((double)area);
+	}
+
+	// returns Map<Integer, List<Integer>> fitting convex hull
+	private Map<Integer, List<Integer>> createDynamicShape(Shape opponent_shape, int n) {
+
 		Iterator <Point> it = opponent_shape.iterator();
 		int minLength = Integer.MAX_VALUE;
 		int minWidth = Integer.MAX_VALUE;
 		int maxLength = Integer.MIN_VALUE;
 		int maxWidth = Integer.MIN_VALUE;
-		
+
 		while (it.hasNext()) {
 			Point p = it.next();
 			minLength = Math.min(minLength, p.i);
@@ -402,36 +414,56 @@ public class Player implements cc2.sim.Player {
 			minWidth = Math.min(minWidth, p.j);
 			maxWidth = Math.max(maxWidth, p.j);
 		}
-		
+
 		boolean[][] block = new boolean[maxLength + 1][maxWidth + 1];
 		Iterator <Point> it2 = opponent_shape.iterator();
-		
+
 		while (it2.hasNext()) {
 			Point p = it2.next();
 			block[p.i][p.j] = true;
 		}
-		
+
+		boolean[][] newblock = new boolean[maxLength + 4][maxWidth + 4];
 		for (int i = 0; i < block.length; i++) {
 			for (int j = 0; j < block[i].length; j++) {
-				System.out.print(block[i][j] + " ");
+				newblock[i + 2][j + 2] = block[i][j];
+			}
+		}
+		
+		for (int i = 0; i < newblock.length; i++) {
+			for (int j = 0; j < newblock[i].length; j++) {
+				System.out.print(newblock[i][j] + " ");
 			}
 			System.out.println();
 		}
-		
+
 		Set<Point> points = new HashSet<Point>();
 		System.out.println("maxwidth, maxlength: " + maxWidth + ", " + maxLength);
 		if (maxWidth == 0 || maxLength == 0) {
-			points.add(new Point(0, 0));
-			points.add(new Point(0, 1));
-			points.add(new Point(0, 2));
-			points.add(new Point(0, 3));
-			points.add(new Point(0, 4));
+			if (n == 5) {
+				points.add(new Point(0, 0));
+				points.add(new Point(0, 1));
+				points.add(new Point(0, 2));
+				points.add(new Point(0, 3));
+				points.add(new Point(0, 4));
+			}
+			else if (n == 8) {
+				points.add(new Point(0, 0));
+				points.add(new Point(0, 1));
+				points.add(new Point(0, 2));
+				points.add(new Point(0, 3));
+				points.add(new Point(0, 4));
+				points.add(new Point(0, 5));
+				points.add(new Point(0, 6));
+				points.add(new Point(0, 7));
+				
+			}
+			
 		}
 		else {
-			points = createShape(block, 5, points, 2);
+			points = createShape(newblock, n, points, 2);
 		}
-		
-		
+
 		Map<Integer, List<Integer>> rMap = new HashMap<Integer, List<Integer>>();
 		for (Point p : points) {
 			if (!rMap.containsKey(p.i)) {
@@ -444,8 +476,9 @@ public class Player implements cc2.sim.Player {
 			}
 		}
 		return rMap;
-		
 	}
+
+	// find a shape from opponent's shape
 	private Set<Point> createShape(boolean[][] cutout, int n, Set<Point> points, int edges) {
 		for (int i = 0; i < cutout.length; i++) {
 			for (int j = 0; j < cutout.length; j++) {
@@ -464,28 +497,50 @@ public class Player implements cc2.sim.Player {
 						count++;
 					}
 					if (count >= edges) {
-						if (points.size() == 0 || (points.size() != 0 && checkAdjacent(points, i, j))) {
+
+						if (points.size() == 0) {
 							Point p = new Point(i, j);
 							cutout[i][j] = true;
 							points.add(p);
-							if (points.size() >= n) {
-								return points;
+						}
+						else if (points.size() != 0 && checkAllAdjacent(points, i, j)){
+							if (checkAdjacent(points, i, j)) {
+								Point p = new Point(i, j);
+								cutout[i][j] = true;
+								points.add(p);
+							}
+							else if (points.size() + 2 <= n){
+								Point p = new Point(i, j);
+								cutout[i][j] = true;
+								points.add(p);
+								
+								Point new_p = returnAdjPoint(cutout, points, i, j);
+								cutout[new_p.i][new_p.j] = true;
+								points.add(new_p);
 							}
 						}
-						
+						if (points.size() >= n) {
+							return points;
+						}
 					}
 				}
-				
 			}
 		}
-		System.out.println("current points: " + points);
-		
 		return createShape(cutout, n, points, edges - 1);
+	}
+
+	private boolean checkAllAdjacent(Set<Point> point, int i, int j) {
+		for (Point p : point) {
+			if ((p.i == i - 1 && p.j == j) || (p.i == i + 1 && p.j == j) || (p.i == i && p.j == j - 1) || (p.i == i && p.j == j + 1)
+					|| (p.i == i - 1 && p.j == j - 1) || (p.i == i + 1 && p.j == j - 1) || (p.i == i - 1 && p.j == j + 1) || (p.i == i + 1 && p.j == j + 1)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private boolean checkAdjacent(Set<Point> point, int i, int j) {
 		for (Point p : point) {
-			System.out.println("p.i, p.j: " + p.i + p.j);
 			if ((p.i == i - 1 && p.j == j) || (p.i == i + 1 && p.j == j) || (p.i == i && p.j == j - 1) || (p.i == i && p.j == j + 1)) {
 				return true;
 			}
@@ -493,20 +548,27 @@ public class Player implements cc2.sim.Player {
 		return false;
 	}
 
-	private double percentCut(Dough dough, int offset, int area)
-	{
-		int num_cuts = 0;
-		for (int i = offset ; i != dough.side()- offset ; ++i)
-		{
-			for (int j = offset; j != dough.side()-offset; ++j) 
-			{
-				if (dough.uncut(i,j) == false)
-				{
-					num_cuts++;
+
+	private Point returnAdjPoint(boolean[][] cutout, Set<Point> point, int i, int j) {
+		for (Point p : point) {
+			if ((p.i - 1 == i - 1 || p.i - 1 == i || p.i - 1 == i + 1) && (p.j == j - 1 || p.j == j || p.j == j + 1)) {
+				if (!cutout[p.i - 1][p.j]) {
+					return new Point(p.i - 1, p.j);
 				}
 			}
+			if ((p.i + 1 == i - 1 || p.i + 1 == i || p.i + 1 == i + 1) && (p.j == j - 1 || p.j == j || p.j == j + 1)) {
+				if (!cutout[p.i + 1][p.j])
+					return new Point(p.i + 1, p.j);
+			}
+			if ((p.i == i - 1 || p.i == i || p.i == i + 1) && (p.j - 1 == j - 1 || p.j - 1 == j || p.j - 1 == j + 1)) {
+				if (!cutout[p.i][p.j - 1])
+					return new Point(p.i, p.j - 1);
+			}
+			if ((p.i == i - 1 || p.i == i || p.i == i + 1) && (p.j + 1 == j - 1 || p.j + 1 == j || p.j + 1 == j + 1))
+				if (!cutout[p.i][p.j + 1])
+					return new Point(p.i, p.j + 1);
 		}
-		return num_cuts/((double)area);
+		return new Point(i, j);
 	}
 }
 
