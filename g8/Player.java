@@ -30,18 +30,14 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 			row_2 = new boolean [cutter.length - 1];
 
 			if (length == 11) {
-				pairs.put(0, Arrays.asList(0,3));
+				pairs.put(0, Arrays.asList(0,3,4));
 				pairs.put(1, Arrays.asList(0, 1, 2, 3, 4));
-				pairs.put(2, Arrays.asList(1, 3));
-				pairs.put(3, Arrays.asList(3, 4));	
+				pairs.put(2, Arrays.asList(1, 2, 3));
+				// pairs.put(3, Arrays.asList(3, 4));	
 			}
 
 			else if (length == 8) {
 				pairs = createDynamicShape(opponent_shapes[0], 8);
-				//pairs.put(0, Arrays.asList(0, 1));
-				//pairs.put(1, Arrays.asList(0, 1, 2));
-				//pairs.put(2, Arrays.asList(1, 2));
-				//pairs.put(3, Arrays.asList(1));
 
 			}
 			else {
@@ -51,15 +47,20 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 		}
 		else {
 			if (length == 5) {
-				pairs.put(0, Arrays.asList(0, 1));
-				pairs.put(1, Arrays.asList(1));
-				pairs.put(2, Arrays.asList(0, 1));
+				pairs.put(0, Arrays.asList(0));
+				pairs.put(1, Arrays.asList(0,1));
+				pairs.put(2, Arrays.asList(0));
+				pairs.put(3, Arrays.asList(0));
 			}
 			else if (length == 8) {
-				pairs.put(0, Arrays.asList(0, 1, 2));
-				pairs.put(1, Arrays.asList(1, 2));
-				pairs.put(2, Arrays.asList(0, 1));
-				pairs.put(3, Arrays.asList(1));
+				pairs.put(0, Arrays.asList(0));
+				pairs.put(1, Arrays.asList(0));
+				pairs.put(2, Arrays.asList(0));
+				pairs.put(3, Arrays.asList(0));
+				pairs.put(4, Arrays.asList(0));
+				pairs.put(5, Arrays.asList(0,1));
+				pairs.put(6, Arrays.asList(0));
+
 			}
 		}
 
@@ -79,7 +80,6 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 
 	public Move cut(Dough dough, Shape[] shapes, Shape[] opponent_shapes)
 	{
-		run += 1;
 		if (dough.uncut() || dough.countCut() == 5) 
 		{
 			for(int i = 11; i >= 5; i -=3)
@@ -89,7 +89,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 			dough_cache = new int[dough.side()][dough.side()];
 		}
 
-		boolean found = false;
+		Move nextMove = null;
 		List<Move> commonMoves = new ArrayList<Move>();
 		Set<Point> opponent_move = getOpponentMove(dough);
 		Set<Point> convex_hull = new HashSet<Point>();
@@ -117,8 +117,6 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 				destructiveMoves = destructOpponent(convex_hull, dough, shapeIndex, shapes);
 			}
 
-			Move nextMove = null;
-
 			while(neighbors.size() <= dough.side()*dough.side())
 			{
 				if(dough.uncut())
@@ -136,33 +134,25 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 				System.out.println("found stacking moves: " + cur_stackingMoves.size());
 				System.out.println("Found common moves: " + commonMoves.size());
 
-				Iterator<Move> iterDestructiveMoves = destructiveMoves.iterator();
-				Iterator<Move> iterStackingMoves = cur_stackingMoves.iterator();
-				Iterator<Move> iterNeighborMoves = neighborMoves.iterator();
-				Iterator<Move> iterCommonMoves = commonMoves.iterator();
-
-
 				while(!destructiveMoves.isEmpty() || !neighborMoves.isEmpty())
 				{
 					if (commonMoves.isEmpty()) 
 					{
 						System.out.println("no common moves");
-						if (iterDestructiveMoves.hasNext()) {
-							nextMove = iterDestructiveMoves.next();
-							iterDestructiveMoves.remove();
+						if (!destructiveMoves.isEmpty()) 
+						{
+							nextMove = popRandom(destructiveMoves);
 						}
 						else
 						{
-							nextMove = iterNeighborMoves.next();
-							iterNeighborMoves.remove();
+							nextMove = popRandom(neighborMoves);
 						}
 					}
 					else
 					{
 						System.out.println("selecting common move");
-						if (iterCommonMoves.hasNext()) {
-							nextMove = iterCommonMoves.next();
-							iterCommonMoves.remove();
+						if (!commonMoves.isEmpty()) {
+							nextMove = popRandom(commonMoves);
 						}
 					}
 
@@ -173,10 +163,22 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 						return nextMove;
 					}
 				}
-				if(neighbors.size() == 0)
+				if(neighbors.size() == 0 || neighbors.size() == 2500)
 				{
+					if(dough.uncut())
+					{
+						List<Move> nextMoves = randomMove(dough, 5, shapes);
+						return nextMoves.get(gen.nextInt(nextMoves.size()));
+					}
 					System.out.println("Opponent ran out of moves!");
-					return randomMove(dough, shapeIndex, shapes);
+					for (int i = 11; i >=5; i-=3)
+					{
+						List<Move> nextMoves = randomMove(dough, i, shapes);
+						if (nextMoves.size() > 0)
+						{
+							return nextMoves.get(gen.nextInt(nextMoves.size()));
+						}
+					}
 				}
 				System.out.println("Expanding Neighbors: " + neighbors.size());
 				neighbors.addAll(getNeighbors(neighbors));
@@ -191,7 +193,14 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 				return null;
 			}
 		}
+	}
 
+	private Move popRandom(List<Move> moves)
+	{
+		int randomIdx = gen.nextInt(moves.size());
+		Move result = moves.get(randomIdx);
+		moves.remove(randomIdx);
+		return result;
 	}
 
 	public void updateDough(Move nextMove)
@@ -249,7 +258,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 		}
 		return moves;
 	}
-	private Move randomMove(Dough dough, int index, Shape[] shapes) {
+	private List<Move> randomMove(Dough dough, int index, Shape[] shapes) {
 		List<Move> moves = new ArrayList<Move>();
 		for (int i = offset ; i != dough.side() - offset ; ++i) {
 			for (int j = offset; j != dough.side() - offset; ++j) {
@@ -266,7 +275,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 				}
 			}
 		}
-		return moves.get(gen.nextInt(moves.size()));
+		return moves;
  	}
 
 	private List<Move> cutShapes(Dough dough, int index, Shape[] shapes) {
@@ -380,22 +389,6 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 			}
 			System.out.print("\n");
 		}
-	}
-
-	private double percentCut(Dough dough, int offset, int area)
-	{
-		int num_cuts = 0;
-		for (int i = offset ; i != dough.side()- offset ; ++i)
-		{
-			for (int j = offset; j != dough.side()-offset; ++j) 
-			{
-				if (dough.uncut(i,j) == false)
-				{
-					num_cuts++;
-				}
-			}
-		}
-		return num_cuts/((double)area);
 	}
 
 	// returns Map<Integer, List<Integer>> fitting convex hull
