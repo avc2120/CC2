@@ -123,8 +123,8 @@ public class Player implements cc2.sim.Player {
 			if (found) {
 				System.out.println("Found " + destructiveMoves.size() + " destructive moves for shape: " + i );
 				System.out.println("Picking the first one...");
-				// nextMove = destructiveMoves.get(0);
-				nextMove = getBestMove(destructiveMoves, dough, shapes, opponent_shapes);
+				nextMove = destructiveMoves.get(0);
+				// nextMove = getBestMove(destructiveMoves, dough, shapes, opponent_shapes);
 				break;
 			}
 			else {
@@ -132,8 +132,8 @@ public class Player implements cc2.sim.Player {
 				List<Move> moreMoves = new ArrayList<Move>();
 				moreMoves = cutShapes(dough, i, shapes);
 				if (!moreMoves.isEmpty()) {
-					// nextMove = moreMoves.get(0);
-					nextMove = getBestMove(moreMoves, dough, shapes, opponent_shapes);
+					nextMove = moreMoves.get(0);
+					// nextMove = getBestMove(moreMoves, dough, shapes, opponent_shapes);
 					break;
 				}
 			}
@@ -151,46 +151,47 @@ public class Player implements cc2.sim.Player {
 		return myMove;
 	}
 
-	private Move<move> getBestMove(List<Move> candidateMoves, Dough dough, Shape[] shapes, Shape[] opponent_shapes) {
+	// private Move<move> getBestMove(List<Move> candidateMoves, Dough dough, Shape[] shapes, Shape[] opponent_shapes) {
 
-		int maxSoFar = Math.MIN_VALUE;
-		Move bestMove = null;
-		for (Move move: candidateMoves) {
-			oppScore = computeMoveScore(dummyDough, opponent_shapes, move);
-			myScore = computeMoveScore(dummyDough, shapes, move);
-			if (myScore - oppScore > maxSoFar) {
-				maxSoFar = myScore - oppScore;
-				bestMove = move;
-			}
-		}
-		return bestMove;
-	}
+	// 	int maxSoFar = Math.MIN_VALUE;
+	// 	Move bestMove = null;
+	// 	for (Move move: candidateMoves) {
+	// 		int oppScore = computeMoveScore(opponent_shapes, move);
+	// 		int myScore = computeMoveScore(shapes, move);
+	// 		if (myScore - oppScore > maxSoFar) {
+	// 			maxSoFar = myScore - oppScore;
+	// 			bestMove = move;
+	// 		}
+	// 	}
+	// 	return bestMove;
+	// }
 
-	private int computeMoveScore(Dough dough, Shape[] shapes, Move thisMove) {
-		Dough dummyDough = new Dough(dough.side());
-		for (int i = 0; i < dough.side(); i++) {
-			for (int j = 0; j < dough.side(); j++) {
-				if (thisMove.point.i == i && thisMove.point.j == j)
-					dummyDough[i][j] = true;
-				else 
-					dummyDough[i][j] = dough[i][j];
-			}
-		}
-		int[] values = new int[3];
-		int shapeIndex = 11;
-		for (int i = 0; i < 3; i++) {
-			values[i] = cutShapes(dummyDough, shapeIndex, opponent_shapes);
-			shapeIndex -= 3;
-		}
+	// private int computeMoveScore(Dough dough, Shape[] shapes, Move thisMove) {
+	// 	Dough dummyDough = new int[dough.side()][dough.side()];
 
-		int[] weights = {11, 8, 5};
-		int score = 0;
-		for (int i = 0; i < values.size(); i++) {
-			score += values[i] * weights[i];
-		}
-		return score;
+	// 	for (int i = 0; i < dough.side(); i++) {
+	// 		for (int j = 0; j < dough.side(); j++) {
+	// 			if (thisMove.point.i == i && thisMove.point.j == j)
+	// 				dummyDough[i][j] = 1;
+	// 			else 
+	// 				dummyDough[i][j] = dough_cache[i][j];
+	// 		}
+	// 	}
+	// 	int[] values = new int[3];
+	// 	int shapeIndex = 11;
+	// 	for (int i = 0; i < 3; i++) {
+	// 		values[i] = cutShapes(dummyDough, shapeIndex, opponent_shapes);
+	// 		shapeIndex -= 3;
+	// 	}
 
-	}
+	// 	int[] weights = {11, 8, 5};
+	// 	int score = 0;
+	// 	for (int i = 0; i < values.size(); i++) {
+	// 		score += values[i] * weights[i];
+	// 	}
+	// 	return score;
+
+	// }
 
 	private List<Move> destructOpponent(Set<Point> neighbors, Dough dough, int index, Shape[] shapes, List<Move> moves) {	
 		for (Point p: neighbors) {
