@@ -15,9 +15,9 @@ public class Player implements cc2.sim.Player {
 	private static int[][] dough_cache;
 	private HashMap<Move, Shape> move_rotation = new HashMap<Move, Shape>();
 	private HashMap<Move, Point> move_point = new HashMap<Move, Point>();
-	List<Move> stackingMoves = new ArrayList<Move>();
-	int run = 0;
-	Iterator<Move> iterStackingMoves = null;
+	private HashMap<Integer, List<Move>> stackingMoves = new HashMap<Integer,List<Move>>();
+	private int run = 0;
+	private static int shapeIndex = 11;
 
 	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 	{
@@ -84,164 +84,132 @@ public class Player implements cc2.sim.Player {
 
 	public Move cut(Dough dough, Shape[] shapes, Shape[] opponent_shapes)
 	{
-		// prune larger shapes if initial move
-		if (dough.uncut()) 
+		run += 1;
+		if (dough.uncut() || dough.countCut() == 5) 
 		{
+			for(int i = 11; i >= 5; i -=3)
+			{
+				stackingMoves.put(i, cutShapes(dough, i, shapes));
+			}
 			dough_cache = new int[dough.side()][dough.side()];
-			int min = Integer.MAX_VALUE;
-			for (Shape s : shapes)
-			{
-				if (min > s.size())
-				{
-					min = s.size();
-				}
-			}
-			for (int s = 0 ; s != shapes.length ; ++s)
-			{
-				if (shapes[s].size() != min)
-				{
-					shapes[s] = null;
-				}
-			}
 		}
 
-				//if other team starts, create dough after first move
-		if(dough.countCut() == 5)
-		{
-			dough_cache = new int[dough.side()][dough.side()];
-		}		
-
-		// if (percentCut(dough, offset, dough.side()*dough.side()) > 0.5) {
-		// 	System.out.println("BOARD 50% FULLLLL!!!!");
-		// 	stackingMoves.clear();
-		// }
-			
-
 		boolean found = false;
-		List <Move> commonMoves = new ArrayList<Move>();
-
+		List<Move> commonMoves = new ArrayList<Move>();
 		Set<Point> opponent_move = getOpponentMove(dough);
+		Set<Point> convex_hull = new HashSet<Point>();
 		Set<Point> neighbors = new HashSet<Point>();
+		List<Move> cur_stackingMoves = new ArrayList<Move>();
+		List<Move> destructiveMoves = new ArrayList<Move>();
+		List<Move> neighborMoves = new ArrayList<Move>();
 
 		if(!opponent_move.isEmpty())
 		{
-			neighbors = convexHull(opponent_move, dough);
+			convex_hull = convexHull(opponent_move, dough);
+			neighbors = getNeighbors(opponent_move);
 		}
-
-		List<Move> destructiveMoves = new ArrayList<Move>();
-
 		
-
-		while(!found) 
-		{
-					//iterate over moves in cutshapes
-			while (iterStackingMoves != null && iterStackingMoves.hasNext()) 
+		while(true)
+		{	
+			if(dough.uncut())
 			{
+				destructiveMoves = destructOpponent(convex_hull, dough, 5, shapes);
+				cur_stackingMoves = stackingMoves.get(5);
+			}
+			else
+			{
+				cur_stackingMoves = stackingMoves.get(shapeIndex);
+				destructiveMoves = destructOpponent(convex_hull, dough, shapeIndex, shapes);
+			}
 
-				System.out.println("starting while");
+			Move nextMove = null;
 
-				run += 1;
-				
-				for (int i = 11; i >=5; i -= 3) {
-					destructiveMoves.addAll(destructOpponent(neighbors, dough, i, shapes, destructiveMoves));
+			while(neighbors.size() <= dough.side()*dough.side())
+			{
+				if(dough.uncut())
+				{
+					neighborMoves = destructOpponent(neighbors, dough, 5, shapes);
 				}
-				
+				else
+				{
+					neighborMoves = destructOpponent(neighbors, dough, shapeIndex, shapes);
+				}
+				commonMoves = getIntersection(destructiveMoves, neighborMoves);
+
 				System.out.println("found destructive moves: " + destructiveMoves.size());
-
-				commonMoves = getIntersection(destructiveMoves, stackingMoves);
-				Iterator<Move> iterCommonMoves = commonMoves.iterator();
-
+				System.out.println("found neighbor moves: " + neighborMoves.size());
+				System.out.println("found stacking moves: " + cur_stackingMoves.size());
 				System.out.println("Found common moves: " + commonMoves.size());
 
-				Move nextMove = null;
-				boolean valid = false;
-				
-				while (!valid) 
-				{
-					nextMove = null;
-					// System.out.println("Still invalid");
+				Iterator<Move> iterDestructiveMoves = destructiveMoves.iterator();
+				Iterator<Move> iterStackingMoves = cur_stackingMoves.iterator();
+				Iterator<Move> iterNeighborMoves = neighborMoves.iterator();
+				Iterator<Move> iterCommonMoves = commonMoves.iterator();
 
+
+				while(!destructiveMoves.isEmpty() || !neighborMoves.isEmpty())
+				{
 					if (commonMoves.isEmpty()) 
 					{
-						// System.out.println("no common moves");
-
-						if (iterStackingMoves.hasNext()) {
-							nextMove = iterStackingMoves.next();
-							iterStackingMoves.remove();
+						System.out.println("no common moves");
+						if (iterDestructiveMoves.hasNext()) {
+							nextMove = iterDestructiveMoves.next();
+							iterDestructiveMoves.remove();
+						}
+						else
+						{
+							nextMove = iterNeighborMoves.next();
+							iterNeighborMoves.remove();
 						}
 					}
-					else 
+					else
 					{
-						// System.out.println("selecting common move");
+						System.out.println("selecting common move");
 						if (iterCommonMoves.hasNext()) {
 							nextMove = iterCommonMoves.next();
-							Iterator<Move> tempIter = stackingMoves.iterator();
-
-							while(tempIter.hasNext())
-							{
-								if (tempIter.next() == nextMove)
-								{
-									tempIter.remove();
-								}
-							}
+							iterCommonMoves.remove();
 						}
-
 					}
-
-					if (nextMove == null)
-						break;
-
-					// System.out.println("This move is @ point " + nextMove.point.toString());
 
 					Shape[] rotations = shapes[nextMove.shape].rotations();
-
 					if (dough.cuts(rotations[nextMove.rotation], nextMove.point)) {
-						// System.out.println("This is still a valid move! @ point " + nextMove.point.toString());
-						found = true;
-						valid = true;
-						if (run == 1) {
-							// System.out.println("Clearing 5 shape moves");
-							stackingMoves.clear();
-						}
+						System.out.println("This move is @ point " + nextMove.point.toString());
+						updateDough(nextMove);
+						return nextMove;
 					}
 				}
-				Move myMove = nextMove;
-				Shape myShape = move_rotation.get(myMove);
-				Point q = move_point.get(myMove);
-				Iterator<Point> pts = myShape.iterator();
-				while(pts.hasNext())
+				if(neighbors.size() == 0)
 				{
-					Point p = pts.next();
-					dough_cache[p.i + q.i][p.j + q.j] = 1;
+					System.out.println("Opponent ran out of moves!");
+					return randomMove(dough, shapeIndex, shapes);
 				}
-				return nextMove;	
-
-
+				System.out.println("Expanding Neighbors: " + neighbors.size());
+				neighbors.addAll(getNeighbors(neighbors));
 			}
-
-			int shapeIndex = 11;
-					//find next set of moves 
-			while (stackingMoves.isEmpty() && shapeIndex >= 5) {
-
-				// System.out.println("Finding next set of moves for shape " + shapeIndex);
-				stackingMoves = cutShapes(dough, shapeIndex, shapes);
-				iterStackingMoves = stackingMoves.iterator();
-
-
-				if (stackingMoves.isEmpty()) {
-					// System.out.println("Found no moves for shape " + shapeIndex);
-				}
-				else {
-					// System.out.println("Found " + stackingMoves.size() + " moves for shape " + shapeIndex);
-				}
-				shapeIndex -=3;
-
+			if(shapeIndex > 5)
+			{
+				neighbors = getNeighbors(opponent_move);
+				shapeIndex -= 3;
+			}
+			else
+			{
+				return null;
 			}
 		}
 
-		return null;
+	}
 
-		
+	public void updateDough(Move nextMove)
+	{
+		Move myMove = nextMove;
+		Shape myShape = move_rotation.get(myMove);
+		Point q = move_point.get(myMove);
+		Iterator<Point> pts = myShape.iterator();
+		while(pts.hasNext())
+		{
+			Point p = pts.next();
+			dough_cache[p.i + q.i][p.j + q.j] = 1;
+		}
 	}
 
 	public List<Move> getIntersection(List<Move> list1, List<Move> list2) 
@@ -261,8 +229,9 @@ public class Player implements cc2.sim.Player {
 		return temp;
 	}
 
-	private List<Move> destructOpponent(Set<Point> neighbors, Dough dough, int index, Shape[] shapes, List<Move> moves)
+	private List<Move> destructOpponent(Set<Point> neighbors, Dough dough, int index, Shape[] shapes)
 	{	
+		List<Move> moves = new ArrayList<Move>();
 		for (Point p: neighbors)
 		{
 			for (int si = 0 ; si != shapes.length ; ++si) 
@@ -285,71 +254,53 @@ public class Player implements cc2.sim.Player {
 		}
 		return moves;
 	}
+	private Move randomMove(Dough dough, int index, Shape[] shapes) {
+		List<Move> moves = new ArrayList<Move>();
+		for (int i = offset ; i != dough.side() - offset ; ++i) {
+			for (int j = offset; j != dough.side() - offset; ++j) {
+				Point p = new Point(i, j);
+				for (int si = 0 ; si != shapes.length ; ++si) {
+					if (shapes[si] == null) continue;
+					if (shapes[si].size() != index) continue;
+					Shape[] rotations = shapes[si].rotations();
+					for (int ri = 0 ; ri != rotations.length ; ++ri) {
+						Shape s = rotations[ri];
+						if (dough.cuts(s, p))
+							moves.add(new Move(si, ri, p));
+					}
+				}
+			}
+		}
+		return moves.get(gen.nextInt(moves.size()));
+ 	}
 
 	private List<Move> cutShapes(Dough dough, int index, Shape[] shapes) {
-
 		int oddRow = 0;
 		int oddStep = 0;
 		List <Move> moves = new ArrayList <Move> ();
+		for (int i = 0; i < dough.side(); i++) {
+			for (int j = 0; j < dough.side(); j++) {
+				Point p = new Point(i, j);
 
-		// if (index == 11 && run == 1) {
-		// 	for (int i = 1; i < dough.side(); i += 5) {
-		// 		oddRow = oddRow ^ 1;
-		// 		oddStep = 0;
-		// 		for (int j = oddRow; j < dough.side(); j += (4 + oddStep)) {
-		// 			oddStep = oddStep ^ 1;
-		// 			Point p = new Point(i, j);
-		// 			for (int si = 0 ; si != shapes.length ; ++si) {
+				for (int si = 0 ; si != shapes.length ; ++si) {
 
-		// 				if (shapes[si] == null) continue;
-		// 				if (shapes[si].size() != index) continue;
+					if (shapes[si] == null) continue;
+					if (shapes[si].size() != index) continue;
 
-		// 				Shape[] rotations = shapes[si].rotations();
-		// 				int ri;
-		// 				if (oddStep == 1) 
-		// 					ri = 2;
-		// 				else
-		// 					ri = 1;
-		// 				Shape s = rotations[ri];
-		// 				if (dough.cuts(s, p)) {
-		// 					Move cur_Move = new Move(si, ri, p);
-		// 					moves.add(cur_Move);
-		// 					move_rotation.put(cur_Move, rotations[ri]);
-		// 					move_point.put(cur_Move, p);
-
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-
-
-		// }
-
-		// else {
-			for (int i = 0; i < dough.side(); i++) {
-				for (int j = 0; j < dough.side(); j++) {
-					Point p = new Point(i, j);
-
-					for (int si = 0 ; si != shapes.length ; ++si) {
-
-						if (shapes[si] == null) continue;
-						if (shapes[si].size() != index) continue;
-
-						Shape[] rotations = shapes[si].rotations();
-						for (int ri = 0; ri < rotations.length; ri++) {
-							Shape s = rotations[ri];
-							if (dough.cuts(s, p)) {
-								// System.out.println("Found a move");
-								Move cur_Move = new Move(si, ri, p);
-								moves.add(cur_Move);
-								move_rotation.put(cur_Move, rotations[ri]);
-								move_point.put(cur_Move, p);
-							}
+					Shape[] rotations = shapes[si].rotations();
+					for (int ri = 0; ri < rotations.length; ri++) {
+						Shape s = rotations[ri];
+						if (dough.cuts(s, p)) {
+							// System.out.println("Found a move");
+							Move cur_Move = new Move(si, ri, p);
+							moves.add(cur_Move);
+							move_rotation.put(cur_Move, rotations[ri]);
+							move_point.put(cur_Move, p);
 						}
 					}
 				}
 			}
-		// }
+		}
 		return moves;
 	}
 
@@ -376,73 +327,51 @@ public class Player implements cc2.sim.Player {
 		Set<Point> neighbors = new HashSet<Point>();
 		for(Point point: points)
 		{
-			neighbors.addAll(new HashSet<Point>(Arrays.asList(point.neighbors())));
+			int m = dough_cache.length;
+			int n = (point.i > 0 ? 1 : 0) + (point.i < m ? 1 : 0)
+			      + (point.j > 0 ? 1 : 0) + (point.j < m ? 1 : 0);
+			if (point.i > 0) neighbors.add(new Point(point.i - 1, point.j));
+			if (point.i < m) neighbors.add(new Point(point.i + 1, point.j));
+			if (point.j > 0) neighbors.add(new Point(point.i, point.j - 1));
+			if (point.j < m) neighbors.add(new Point(point.i, point.j + 1));
 		}
 		return neighbors;
 	}
 
 	private Set<Point> convexHull(Set<Point> opponent_moves, Dough dough) {
-		
+		int side_length = 4;
 		Set<Point> result = new HashSet<Point>();
 		int minLength = Integer.MAX_VALUE;
 		int minWidth = Integer.MAX_VALUE;
 		int maxLength = Integer.MIN_VALUE;
 		int maxWidth = Integer.MIN_VALUE;
 		
+		int centroid_x = 0;
+		int centroid_y = 0;
 		for(Point p : opponent_moves)
 		{
-			minLength = Math.min(minLength, p.i);
-			maxLength = Math.max(maxLength, p.i);
-			minWidth = Math.min(minWidth, p.j);
-			maxWidth = Math.max(maxWidth, p.j);
+			centroid_x += p.i;
+			centroid_y += p.j;
 		}
+		centroid_x = (int)((double)centroid_x/opponent_moves.size());
+		centroid_y = (int)(centroid_y/opponent_moves.size());
 
-		// minLength = minLength>1? minLength-1: minLength;
-		// maxLength = maxLength==dough.side()? maxLength: maxLength+1;
-		// minWidth = minWidth>1? minWidth-1: minWidth;
-		// maxWidth = maxWidth==dough.side()? maxWidth: maxWidth+1;
-
-		int largerSide = maxLength-minLength > maxWidth-minWidth? maxLength-minLength: maxWidth-minWidth;
-		System.out.println("larger side: " + largerSide);
-		int midWidth = (int)((maxWidth+ minWidth)/2);
-		int midLength = (int)((maxLength+ minLength)/2);
-		double offset = 0.2;
-		if(maxLength-minLength > maxWidth-minWidth)
+		Point centroid = new Point(centroid_x, centroid_y);
+		System.out.println(centroid.toString());
+		minWidth = (int)(centroid_x-(side_length/2.0)) > 0? (int)(centroid_x-(side_length/2.0)): 0;
+		maxWidth = (int)(centroid_x+(side_length/2.0)) < dough.side()? (int)(centroid_x+(side_length/2.0)) : dough.side();
+		minLength = (int)(centroid_y-(side_length/2.0)) > 0? (int)(centroid_y-(side_length/2.0)): 0;
+		maxLength = (int)(centroid_y+(side_length/2.0)) < dough.side() ? (int)(centroid_y+(side_length/2.0)) : dough.side();
+		
+		System.out.println("maxlength: "+ maxLength);
+		for(int i = minWidth; i < maxWidth; i++)
 		{
-			minWidth = (int)(midWidth - (offset*largerSide)) >0? (int)(midWidth - (offset*largerSide)): 0;
-			maxWidth = (int)(midWidth + (offset*largerSide))<dough.side()? (int)(midWidth + (offset*largerSide)): dough.side();
-
-			minLength = Math.min((int)(midLength - (offset*largerSide)), dough.side());
-			minLength = Math.max(minLength, 0);
-
-			maxLength = Math.min((int)(midLength + (offset*largerSide)), dough.side());
-			maxLength = Math.max(maxLength, 0);
-		}
-		else if (maxLength-minLength < maxWidth-minWidth)
-		{
-			// minWidth = (int)(midWidth + (offset*largerSide)) > 0 ? (int)(midWidth + (offset*largerSide)): 0;
-			// maxWidth = (int)(midWidth - (offset*largerSide)) < dough.side() ? (int)(midWidth - (offset*largerSide)): dough.side();
-			minWidth = Math.min((int)(midWidth - (offset*largerSide)), dough.side());
-			minWidth = Math.max(minWidth, 0);
-
-			maxWidth = Math.min((int)(midWidth + (offset*largerSide)), dough.side());
-			maxWidth = Math.max(maxWidth, 0);
-
-			minLength = (int)(midLength - (offset*largerSide)) >0? (int)(midLength - (offset*largerSide)): 0;
-			maxLength = (int)(midLength + (offset*largerSide))<dough.side()? (int)(midLength + (offset*largerSide)): dough.side();
-		}
-
-
-		for(int row = minLength; row <= maxLength; row++)
-		{
-			for(int col = minWidth; col <= maxWidth; col++)
+			for(int j = minLength; j < maxLength; j++)
 			{
-				System.out.print(0);
-				result.add(new Point(row, col));
+				result.add(new Point(i,j));
 			}
-			System.out.println();
 		}
-		System.out.println((maxLength-minLength) + " by " + (maxWidth-minWidth));
+		System.out.println((maxWidth-minWidth) + " by " + (maxLength-minLength));
 		return result;
 	}
 
