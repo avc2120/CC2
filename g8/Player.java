@@ -120,24 +120,28 @@ public class Player implements cc2.sim.Player {
 					break;
 				}
 			}
+
+			
+
 			if (found) {
 				System.out.println("Found " + destructiveMoves.size() + " destructive moves for shape: " + i );
 				System.out.println("Picking the first one...");
-				if (percentCut(dough) > 0.2)
+				// if (percentCut(dough) > 0)
 					nextMove = getBestMove(destructiveMoves, dough, shapes, opponent_shapes);
-				else
-					nextMove = destructiveMoves.get(0);
+				// else
+				// 	nextMove = destructiveMoves.get(0);
 				break;
 			}
 			else {
 				System.out.println("Couldn't find a destructive move!");
 				List<Move> moreMoves = new ArrayList<Move>();
 				moreMoves = cutShapes(dough, i, shapes);
+
 				if (!moreMoves.isEmpty()) {
-					if (percentCut(dough) > 0.2)
+					// if (percentCut(dough) > 0)
 						nextMove = getBestMove(moreMoves, dough, shapes, opponent_shapes);
-					else
-						nextMove = moreMoves.get(0);
+					// else
+					// 	nextMove = moreMoves.get(0);
 					break;
 				}
 			}
@@ -159,14 +163,35 @@ public class Player implements cc2.sim.Player {
 
 		int maxSoFar = Integer.MIN_VALUE;
 		Move bestMove = null;
+		// System.out.println("Number of moves to check: " + candidateMoves.size());
+		int i = 0;
+		int repeat = 0;
+		int prevDiff = Integer.MIN_VALUE;
 		for (Move move: candidateMoves) {
+
 			int oppScore = computeMoveScore(dough, opponent_shapes, move);
 			int myScore = computeMoveScore(dough, shapes, move);
-			System.out.println("My score: " + myScore + " and opponent's score: " + oppScore);
-			if (myScore - oppScore > maxSoFar) {
-				maxSoFar = myScore - oppScore;
-				bestMove = move;
+			
+			System.out.println(++i + " My score: " + myScore + " and opponent's score: " + oppScore);
+			
+			int diff = myScore - oppScore;
+			if (diff == prevDiff) {
+				repeat++;
+
+				if (repeat > 100) {
+					System.out.println("Found the same difference over a 100 times! Chuck it");
+					break;
+				}
 			}
+			else {
+				repeat = 0;
+
+				if (diff > maxSoFar) {
+					maxSoFar = myScore - oppScore;
+					bestMove = move;
+				}
+			}
+			prevDiff = diff;
 		}
 		System.out.println("Max difference seen: " + maxSoFar);
 		return bestMove;
@@ -186,18 +211,21 @@ public class Player implements cc2.sim.Player {
 		}
 
 
-		int[] values = new int[3];
+		int[] values = new int[1];
 		int shapeIndex = 11;
-		for (int i = 0; i < 3; i++) {
+		// int shapeIndex = shapes[thisMove.shape].size();
+		for (int i = 0; i < values.length; i++) {
 			values[i] = cutShapes(dummyDough, shapeIndex, shapes).size();
 			shapeIndex -= 3;
 		}
 
 		int[] weights = {11, 8, 5};
+		// int[] weights = {shapeIndex};
 		int score = 0;
 		for (int i = 0; i < values.length; i++) {
 			score += values[i] * weights[i];
 		}
+
 		return score;
 
 	}
