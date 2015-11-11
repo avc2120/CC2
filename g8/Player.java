@@ -484,20 +484,20 @@ public class Player implements cc2.sim.Player {
 	private Point returnAdjPoint(boolean[][] cutout, Set<Point> point, int i, int j) {
 		for (Point p : point) {
 			if ((p.i - 1 == i - 1 || p.i - 1 == i || p.i - 1 == i + 1) && (p.j == j - 1 || p.j == j || p.j == j + 1)) {
-				if (!cutout[p.i - 1][p.j]) {
+				if (p.i - 1 >= 0 && !cutout[p.i - 1][p.j]) {
 					return new Point(p.i - 1, p.j);
 				}
 			}
 			if ((p.i + 1 == i - 1 || p.i + 1 == i || p.i + 1 == i + 1) && (p.j == j - 1 || p.j == j || p.j == j + 1)) {
-				if (!cutout[p.i + 1][p.j])
+				if (p.i + 1 <= i && !cutout[p.i + 1][p.j])
 					return new Point(p.i + 1, p.j);
 			}
 			if ((p.i == i - 1 || p.i == i || p.i == i + 1) && (p.j - 1 == j - 1 || p.j - 1 == j || p.j - 1 == j + 1)) {
-				if (!cutout[p.i][p.j - 1])
+				if (p.j - 1 >= 0 && !cutout[p.i][p.j - 1])
 					return new Point(p.i, p.j - 1);
 			}
 			if ((p.i == i - 1 || p.i == i || p.i == i + 1) && (p.j + 1 == j - 1 || p.j + 1 == j || p.j + 1 == j + 1))
-				if (!cutout[p.i][p.j + 1])
+				if (p.j + 1 <= j && !cutout[p.i][p.j + 1])
 					return new Point(p.i, p.j + 1);
 		}
 		return new Point(i, j);
