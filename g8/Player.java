@@ -123,8 +123,10 @@ public class Player implements cc2.sim.Player {
 			if (found) {
 				System.out.println("Found " + destructiveMoves.size() + " destructive moves for shape: " + i );
 				System.out.println("Picking the first one...");
-				nextMove = destructiveMoves.get(0);
-				// nextMove = getBestMove(destructiveMoves, dough, shapes, opponent_shapes);
+				if (percentCut(dough) > 0.2)
+					nextMove = getBestMove(destructiveMoves, dough, shapes, opponent_shapes);
+				else
+					nextMove = destructiveMoves.get(0);
 				break;
 			}
 			else {
@@ -132,8 +134,10 @@ public class Player implements cc2.sim.Player {
 				List<Move> moreMoves = new ArrayList<Move>();
 				moreMoves = cutShapes(dough, i, shapes);
 				if (!moreMoves.isEmpty()) {
-					nextMove = moreMoves.get(0);
-					// nextMove = getBestMove(moreMoves, dough, shapes, opponent_shapes);
+					if (percentCut(dough) > 0.2)
+						nextMove = getBestMove(moreMoves, dough, shapes, opponent_shapes);
+					else
+						nextMove = moreMoves.get(0);
 					break;
 				}
 			}
@@ -151,47 +155,52 @@ public class Player implements cc2.sim.Player {
 		return myMove;
 	}
 
-	// private Move<move> getBestMove(List<Move> candidateMoves, Dough dough, Shape[] shapes, Shape[] opponent_shapes) {
+	private Move getBestMove(List<Move> candidateMoves, Dough dough, Shape[] shapes, Shape[] opponent_shapes) {
 
-	// 	int maxSoFar = Math.MIN_VALUE;
-	// 	Move bestMove = null;
-	// 	for (Move move: candidateMoves) {
-	// 		int oppScore = computeMoveScore(opponent_shapes, move);
-	// 		int myScore = computeMoveScore(shapes, move);
-	// 		if (myScore - oppScore > maxSoFar) {
-	// 			maxSoFar = myScore - oppScore;
-	// 			bestMove = move;
-	// 		}
-	// 	}
-	// 	return bestMove;
-	// }
+		int maxSoFar = Integer.MIN_VALUE;
+		Move bestMove = null;
+		for (Move move: candidateMoves) {
+			int oppScore = computeMoveScore(dough, opponent_shapes, move);
+			int myScore = computeMoveScore(dough, shapes, move);
+			System.out.println("My score: " + myScore + " and opponent's score: " + oppScore);
+			if (myScore - oppScore > maxSoFar) {
+				maxSoFar = myScore - oppScore;
+				bestMove = move;
+			}
+		}
+		System.out.println("Max difference seen: " + maxSoFar);
+		return bestMove;
+	}
 
-	// private int computeMoveScore(Dough dough, Shape[] shapes, Move thisMove) {
-	// 	Dough dummyDough = new int[dough.side()][dough.side()];
+	private int computeMoveScore(Dough dough, Shape[] shapes, Move thisMove) {
+		Dough dummyDough = new DummyDough(dough.side());
+		boolean[][] dummyDoughState = ((DummyDough)dummyDough).getDough();
 
-	// 	for (int i = 0; i < dough.side(); i++) {
-	// 		for (int j = 0; j < dough.side(); j++) {
-	// 			if (thisMove.point.i == i && thisMove.point.j == j)
-	// 				dummyDough[i][j] = 1;
-	// 			else 
-	// 				dummyDough[i][j] = dough_cache[i][j];
-	// 		}
-	// 	}
-	// 	int[] values = new int[3];
-	// 	int shapeIndex = 11;
-	// 	for (int i = 0; i < 3; i++) {
-	// 		values[i] = cutShapes(dummyDough, shapeIndex, opponent_shapes);
-	// 		shapeIndex -= 3;
-	// 	}
+		for (int i = 0; i < dough.side(); i++) {
+			for (int j = 0; j < dough.side(); j++) {
+				if (thisMove.point.i == i && thisMove.point.j == j)
+					dummyDoughState[i][j] = true;
+				else 
+					dummyDoughState[i][j] = (dough_cache[i][j] == 1) ? true : false;
+			}
+		}
 
-	// 	int[] weights = {11, 8, 5};
-	// 	int score = 0;
-	// 	for (int i = 0; i < values.size(); i++) {
-	// 		score += values[i] * weights[i];
-	// 	}
-	// 	return score;
 
-	// }
+		int[] values = new int[3];
+		int shapeIndex = 11;
+		for (int i = 0; i < 3; i++) {
+			values[i] = cutShapes(dummyDough, shapeIndex, shapes).size();
+			shapeIndex -= 3;
+		}
+
+		int[] weights = {11, 8, 5};
+		int score = 0;
+		for (int i = 0; i < values.length; i++) {
+			score += values[i] * weights[i];
+		}
+		return score;
+
+	}
 
 	private List<Move> destructOpponent(Set<Point> neighbors, Dough dough, int index, Shape[] shapes, List<Move> moves) {	
 		for (Point p: neighbors) {
@@ -503,5 +512,20 @@ public class Player implements cc2.sim.Player {
 		return new Point(i, j);
 	}
 
+	private double percentCut(Dough dough) {
+		int area = (dough.side() - 2*offset)*(dough.side()-2*offset);
+		int num_cuts = 0;
+		for (int i = offset ; i != dough.side()- offset ; ++i) {
+			for (int j = offset; j != dough.side()-offset; ++j) {
+				if (dough.uncut(i,j) == false) {
+					num_cuts++;
+				}
+			}
+		}
+		return num_cuts/((double)area);
+	}
+
 }
+
+
 
