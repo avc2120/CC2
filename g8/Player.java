@@ -9,8 +9,12 @@ import java.util.*;
 
 public class Player implements cc2.sim.Player {
 
-	private boolean[] row_2 = new boolean [0];
+	private boolean firstCheck = true;
+
 	private static int offset = 0;
+	private boolean[] row_2 = new boolean [0];
+	private int[] count =  new int[3];
+	private List<Shape> used_shapes = new ArrayList<Shape>(); 
 	private Random gen = new Random();
 	private static int[][] dough_cache;
 	private HashMap<Move, Shape> move_rotation = new HashMap<Move, Shape>();
@@ -18,62 +22,46 @@ public class Player implements cc2.sim.Player {
 	List<Move> stackingMoves = new ArrayList<Move>();
 	int run = 0;
 	Iterator<Move> iterStackingMoves = null;
+	Shape curShape;
 
-	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
-	{
-		// check if first try of given cutter length
+	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes) {
+
+
 		Point[] cutter = new Point [length];
-		Map<Integer, List<Integer>> pairs = new HashMap<Integer, List<Integer>>();
-		
+		ShapeGen sg = new ShapeGen();
+
+
+		// first time picking shape
 		if (row_2.length != cutter.length - 1) {
-			// save cutter length to check for retries
 			row_2 = new boolean [cutter.length - 1];
-
 			if (length == 11) {
-				pairs.put(0, Arrays.asList(0,3));
-				pairs.put(1, Arrays.asList(0, 1, 2, 3, 4));
-				pairs.put(2, Arrays.asList(1, 3));
-				pairs.put(3, Arrays.asList(3, 4));	
+				curShape = sg.elevenShape(length, count[0]);
+				count[0]++;
 			}
-
 			else if (length == 8) {
-				pairs = createDynamicShape(opponent_shapes[0], 8);
-				//pairs.put(0, Arrays.asList(0, 1));
-				//pairs.put(1, Arrays.asList(0, 1, 2));
-				//pairs.put(2, Arrays.asList(1, 2));
-				//pairs.put(3, Arrays.asList(1));
-
+				curShape = sg.createDynamicShape(opponent_shapes[0], length);
+				count[1]++;
+				used_shapes.add(curShape);
 			}
 			else {
-				pairs = createDynamicShape(opponent_shapes[0], 5);
+				curShape = sg.createDynamicShape(opponent_shapes[0], length);
+				count[2]++;
+				used_shapes.add(curShape);
 			}
-			
 		}
+		// backup shapes
 		else {
-			if (length == 5) {
-				pairs.put(0, Arrays.asList(0, 1));
-				pairs.put(1, Arrays.asList(1));
-				pairs.put(2, Arrays.asList(0, 1));
+			if (length == 11) {
+				curShape = sg.elevenShape(length, count[0]);
+				
+				count[0]++;
 			}
-			else if (length == 8) {
-				pairs.put(0, Arrays.asList(0, 1, 2));
-				pairs.put(1, Arrays.asList(1, 2));
-				pairs.put(2, Arrays.asList(0, 1));
-				pairs.put(3, Arrays.asList(1));
-			}
+			else {
+				curShape = sg.changeShape(curShape, used_shapes);
+			}	
+			used_shapes.add(curShape);
 		}
-
-		int i = 0;
-		while (i < cutter.length) {
-			for (Map.Entry<Integer, List<Integer>> pair: pairs.entrySet()) {
-				for (int j : pair.getValue()) {
-					cutter[i] = new Point(pair.getKey(), j);
-					i++;
-				}
-			}
-		}
-
-		return new Shape(cutter);
+		return curShape;
 	}
 
 
@@ -138,7 +126,7 @@ public class Player implements cc2.sim.Player {
 				}
 			}
 		}			
-		
+
 		Move myMove = nextMove;
 		Shape myShape = move_rotation.get(myMove);
 		Point q = move_point.get(myMove);
@@ -262,13 +250,13 @@ public class Player implements cc2.sim.Player {
 	}
 
 	private Set<Point> convexHull(Set<Point> opponent_moves, Dough dough, double offset) {
-		
+
 		Set<Point> result = new HashSet<Point>();
 		int minLength = Integer.MAX_VALUE;
 		int minWidth = Integer.MAX_VALUE;
 		int maxLength = Integer.MIN_VALUE;
 		int maxWidth = Integer.MIN_VALUE;
-		
+
 		for(Point p : opponent_moves) {
 			minLength = Math.min(minLength, p.i);
 			maxLength = Math.max(maxLength, p.i);
@@ -328,179 +316,6 @@ public class Player implements cc2.sim.Player {
 			}
 		}
 		return result;
-	}
-
-	// returns Map<Integer, List<Integer>> fitting convex hull
-	private Map<Integer, List<Integer>> createDynamicShape(Shape opponent_shape, int n) {
-
-		Iterator <Point> it = opponent_shape.iterator();
-		int minLength = Integer.MAX_VALUE;
-		int minWidth = Integer.MAX_VALUE;
-		int maxLength = Integer.MIN_VALUE;
-		int maxWidth = Integer.MIN_VALUE;
-
-		while (it.hasNext()) {
-			Point p = it.next();
-			minLength = Math.min(minLength, p.i);
-			maxLength = Math.max(maxLength, p.i);
-			minWidth = Math.min(minWidth, p.j);
-			maxWidth = Math.max(maxWidth, p.j);
-		}
-
-		boolean[][] block = new boolean[maxLength + 1][maxWidth + 1];
-		Iterator <Point> it2 = opponent_shape.iterator();
-
-		while (it2.hasNext()) {
-			Point p = it2.next();
-			block[p.i][p.j] = true;
-		}
-
-		boolean[][] newblock = new boolean[maxLength + 4][maxWidth + 4];
-		for (int i = 0; i < block.length; i++) {
-			for (int j = 0; j < block[i].length; j++) {
-				newblock[i + 2][j + 2] = block[i][j];
-			}
-		}
-		
-		for (int i = 0; i < newblock.length; i++) {
-			for (int j = 0; j < newblock[i].length; j++) {
-				System.out.print(newblock[i][j] + " ");
-			}
-			System.out.println();
-		}
-
-		Set<Point> points = new HashSet<Point>();
-		System.out.println("maxwidth, maxlength: " + maxWidth + ", " + maxLength);
-		if (maxWidth == 0 || maxLength == 0) {
-			if (n == 5) {
-				points.add(new Point(0, 0));
-				points.add(new Point(0, 1));
-				points.add(new Point(0, 2));
-				points.add(new Point(0, 3));
-				points.add(new Point(0, 4));
-			}
-			else if (n == 8) {
-				points.add(new Point(0, 0));
-				points.add(new Point(0, 1));
-				points.add(new Point(0, 2));
-				points.add(new Point(0, 3));
-				points.add(new Point(0, 4));
-				points.add(new Point(0, 5));
-				points.add(new Point(0, 6));
-				points.add(new Point(0, 7));
-				
-			}
-			
-		}
-		else {
-			points = createShape(newblock, n, points, 2);
-		}
-
-		Map<Integer, List<Integer>> rMap = new HashMap<Integer, List<Integer>>();
-		for (Point p : points) {
-			if (!rMap.containsKey(p.i)) {
-				List<Integer> list = new ArrayList<Integer>();
-				list.add(p.j);
-				rMap.put(p.i, list);
-			}
-			else {
-				rMap.get(p.i).add(p.j);
-			}
-		}
-		return rMap;
-	}
-
-	// find a shape from opponent's shape
-	private Set<Point> createShape(boolean[][] cutout, int n, Set<Point> points, int edges) {
-		for (int i = 0; i < cutout.length; i++) {
-			for (int j = 0; j < cutout.length; j++) {
-				int count = 0;
-				if (cutout[i][j] == false) {
-					if (i > 0 && cutout[i - 1][j]) {
-						count++;
-					}
-					if (i < cutout.length - 1 && cutout[i + 1][j]) {
-						count++;
-					}
-					if (j > 0 && cutout[i][j - 1]) {
-						count++;
-					}
-					if (j < cutout[j].length - 1 && cutout[i][j + 1]) {
-						count++;
-					}
-					if (count >= edges) {
-
-						if (points.size() == 0) {
-							Point p = new Point(i, j);
-							cutout[i][j] = true;
-							points.add(p);
-						}
-						else if (points.size() != 0 && checkAllAdjacent(points, i, j)){
-							if (checkAdjacent(points, i, j)) {
-								Point p = new Point(i, j);
-								cutout[i][j] = true;
-								points.add(p);
-							}
-							else if (points.size() + 2 <= n){
-								Point p = new Point(i, j);
-								cutout[i][j] = true;
-								points.add(p);
-								
-								Point new_p = returnAdjPoint(cutout, points, i, j);
-								cutout[new_p.i][new_p.j] = true;
-								points.add(new_p);
-							}
-						}
-						if (points.size() >= n) {
-							return points;
-						}
-					}
-				}
-			}
-		}
-		return createShape(cutout, n, points, edges - 1);
-	}
-
-	private boolean checkAllAdjacent(Set<Point> point, int i, int j) {
-		for (Point p : point) {
-			if ((p.i == i - 1 && p.j == j) || (p.i == i + 1 && p.j == j) || (p.i == i && p.j == j - 1) || (p.i == i && p.j == j + 1)
-					|| (p.i == i - 1 && p.j == j - 1) || (p.i == i + 1 && p.j == j - 1) || (p.i == i - 1 && p.j == j + 1) || (p.i == i + 1 && p.j == j + 1)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private boolean checkAdjacent(Set<Point> point, int i, int j) {
-		for (Point p : point) {
-			if ((p.i == i - 1 && p.j == j) || (p.i == i + 1 && p.j == j) || (p.i == i && p.j == j - 1) || (p.i == i && p.j == j + 1)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-
-	private Point returnAdjPoint(boolean[][] cutout, Set<Point> point, int i, int j) {
-		for (Point p : point) {
-			if ((p.i - 1 == i - 1 || p.i - 1 == i || p.i - 1 == i + 1) && (p.j == j - 1 || p.j == j || p.j == j + 1)) {
-				if (p.i - 1 >= 0 && !cutout[p.i - 1][p.j]) {
-					return new Point(p.i - 1, p.j);
-				}
-			}
-			if ((p.i + 1 == i - 1 || p.i + 1 == i || p.i + 1 == i + 1) && (p.j == j - 1 || p.j == j || p.j == j + 1)) {
-				if (p.i + 1 <= i && !cutout[p.i + 1][p.j])
-					return new Point(p.i + 1, p.j);
-			}
-			if ((p.i == i - 1 || p.i == i || p.i == i + 1) && (p.j - 1 == j - 1 || p.j - 1 == j || p.j - 1 == j + 1)) {
-				if (p.j - 1 >= 0 && !cutout[p.i][p.j - 1])
-					return new Point(p.i, p.j - 1);
-			}
-			if ((p.i == i - 1 || p.i == i || p.i == i + 1) && (p.j + 1 == j - 1 || p.j + 1 == j || p.j + 1 == j + 1))
-				if (p.j + 1 <= j && !cutout[p.i][p.j + 1])
-					return new Point(p.i, p.j + 1);
-		}
-		return new Point(i, j);
 	}
 
 }
