@@ -58,42 +58,30 @@ public class ShapeGen {
 
 	public Shape changeShape(Shape shape, List<Shape> used_shapes) {
 		Map<Integer, List<Integer>> pairs = new HashMap<Integer, List<Integer>>();
-		Shape s;
-		if (shape.size() == 8) {
-			pairs.put(0, Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7));
-			s = returnShape(pairs, shape.size());
+
+		Map<Integer, List<Integer>> newpairs = new HashMap<Integer, List<Integer>>();
+		newpairs.put(0, Arrays.asList(0, 1, 2));
+		newpairs.put(1, Arrays.asList(0, 2));
+		Shape newShape = shape;
+
+		if (shape.size() == 5 && !shape.equals(returnShape(newpairs, shape.size()))) {
+			newShape = returnShape(newpairs, shape.size());
 		}
 		else {
-			pairs.put(0, Arrays.asList(0, 1, 2, 3, 4));
-			s = returnShape(pairs, shape.size());
-		}
 
-		Shape newShape = s;
-		boolean match = false;
-		int i = shape.size() - 1;
-		for (Shape n : used_shapes) {
-			if (n.equals(newShape)) {
-				match = true;
+			Shape s;
+			if (shape.size() == 8) {
+				pairs.put(0, Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7));
+				s = returnShape(pairs, shape.size());
 			}
-		}
-		if (match == true) {
-			match = false;
-		}
-		else {
-			match = true;
-		}
-		while (!match) {
-			if (shape.size() == 8 && pairs.get(0).contains(shape.size() - 1)) {
-				pairs.put(0, Arrays.asList(0, 1, 2, 3, 4, 5, 6));
+			else {
+				pairs.put(0, Arrays.asList(0, 1, 2, 3, 4));
+				s = returnShape(pairs, shape.size());
 			}
-			else if (shape.size() == 5 && pairs.get(0).contains(shape.size() - 1)) {
-				pairs.put(0, Arrays.asList(0, 1, 2, 3));
-			}
-			pairs.put(1, Arrays.asList(i - 1));
 
-			i--;
-			newShape = returnShape(pairs, shape.size());
-
+			newShape = s;
+			boolean match = false;
+			int i = shape.size() - 1;
 			for (Shape n : used_shapes) {
 				if (n.equals(newShape)) {
 					match = true;
@@ -105,9 +93,33 @@ public class ShapeGen {
 			else {
 				match = true;
 			}
+			while (!match) {
+				if (shape.size() == 8 && pairs.get(0).contains(shape.size() - 1)) {
+					pairs.put(0, Arrays.asList(0, 1, 2, 3, 4, 5, 6));
+				}
+				else if (shape.size() == 5 && pairs.get(0).contains(shape.size() - 1)) {
+					pairs.put(0, Arrays.asList(0, 1, 2, 3));
+				}
+				pairs.put(1, Arrays.asList(i - 1));
+
+				i--;
+				newShape = returnShape(pairs, shape.size());
+
+				for (Shape n : used_shapes) {
+					if (n.equals(newShape)) {
+						match = true;
+					}
+				}
+				if (match == true) {
+					match = false;
+				}
+				else {
+					match = true;
+				}
+			}
+
 		}
-		
-		System.out.println("NEW SHAPE: " + newShape.toString());
+
 		return newShape;
 	}
 
