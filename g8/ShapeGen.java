@@ -73,7 +73,6 @@ public class ShapeGen {
 
 			newShape = s;
 			boolean match = false;
-			//int i = shape.size() - 1;
 			int i = 0, j = 0, k = 1;
 			for (Shape n : used_shapes) {
 				if (n.equals(newShape)) {
@@ -102,34 +101,6 @@ public class ShapeGen {
 					j++;
 				}
 				i++;
-				/*if (j == 0) {
-					pairs.put(1,  Arrays.asList(j));
-				}
-				else if (j % 2 == 0) {
-					pairs.put(1, Arrays.asList(j - 1));
-				}
-				else {
-					pairs.put(1,  Arrays.asList(shape.size() - ))
-				}*/
-				/*if (shape.size() == 8) {
-					if (i % 2 != 0) {
-						pairs.put(1, Arrays.asList(shape.size() - i));
-					}
-					else {
-						pairs.put(1, Arrays.asList(j));
-						j++;
-					}
-				}
-				if (i % 2 != 0) {
-					System.out.println("i 1 : " + i);
-					pairs.put(1, Arrays.asList(shape.size() - k));
-					k--;
-				}
-				else {
-					System.out.println("i2: " + i);
-					
-				}
-				i--;*/
 				newShape = returnShape(pairs, shape.size());
 				System.out.println("NEW SHAPE : " + newShape);
 
@@ -145,8 +116,6 @@ public class ShapeGen {
 					match = true;
 				}
 			}
-
-		//}
 
 		return newShape;
 	}
