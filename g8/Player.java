@@ -17,63 +17,48 @@ public class Player implements cc2.sim.Player {
 	private HashMap<Move, Point> move_point = new HashMap<Move, Point>();
 	List<Move> stackingMoves = new ArrayList<Move>();
 	int run = 0;
+	private int[] count =  new int[3];
 	Iterator<Move> iterStackingMoves = null;
+	private Shape curShape;
+	private List<Shape> used_shapes = new ArrayList<Shape>(); 
 
-	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
+public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 	{
-		// check if first try of given cutter length
 		Point[] cutter = new Point [length];
-		Map<Integer, List<Integer>> pairs = new HashMap<Integer, List<Integer>>();
-		
+		ShapeGen sg = new ShapeGen();
+
+
+		// first time picking shape
 		if (row_2.length != cutter.length - 1) {
-			// save cutter length to check for retries
 			row_2 = new boolean [cutter.length - 1];
-
 			if (length == 11) {
-				pairs.put(0, Arrays.asList(0,3));
-				pairs.put(1, Arrays.asList(0, 1, 2, 3, 4));
-				pairs.put(2, Arrays.asList(1, 3));
-				pairs.put(3, Arrays.asList(3, 4));	
+				curShape = sg.elevenShape(length, count[0]);
+				count[0]++;
 			}
-
 			else if (length == 8) {
-				pairs = createDynamicShape(opponent_shapes[0], 8);
-				//pairs.put(0, Arrays.asList(0, 1));
-				//pairs.put(1, Arrays.asList(0, 1, 2));
-				//pairs.put(2, Arrays.asList(1, 2));
-				//pairs.put(3, Arrays.asList(1));
-
+				curShape = sg.createDynamicShape(opponent_shapes[0], length);
+				count[1]++;
+				used_shapes.add(curShape);
 			}
 			else {
-				pairs = createDynamicShape(opponent_shapes[0], 5);
+				curShape = sg.createDynamicShape(opponent_shapes[0], length);
+				count[2]++;
+				used_shapes.add(curShape);
 			}
-			
 		}
+		// backup shapes
 		else {
-			if (length == 5) {
-				pairs.put(0, Arrays.asList(0, 1));
-				pairs.put(1, Arrays.asList(1));
-				pairs.put(2, Arrays.asList(0, 1));
-			}
-			else if (length == 8) {
-				pairs.put(0, Arrays.asList(0, 1, 2));
-				pairs.put(1, Arrays.asList(1, 2));
-				pairs.put(2, Arrays.asList(0, 1));
-				pairs.put(3, Arrays.asList(1));
-			}
-		}
+			if (length == 11) {
+				curShape = sg.elevenShape(length, count[0]);
 
-		int i = 0;
-		while (i < cutter.length) {
-			for (Map.Entry<Integer, List<Integer>> pair: pairs.entrySet()) {
-				for (int j : pair.getValue()) {
-					cutter[i] = new Point(pair.getKey(), j);
-					i++;
-				}
+				count[0]++;
 			}
+			else {
+				curShape = sg.changeShape(curShape, used_shapes);
+			}	
+			used_shapes.add(curShape);
 		}
-
-		return new Shape(cutter);
+		return curShape;
 	}
 
 
@@ -156,10 +141,19 @@ public class Player implements cc2.sim.Player {
 			Point p = pts.next();
 			dough_cache[p.i + q.i][p.j + q.j] = 1;
 		}
+		run++;
 		return myMove;
 	}
 
 	private Move getBestMove(List<Move> candidateMoves, Dough dough, Shape[] shapes, Shape[] opponent_shapes) {
+
+		if (run == 0) {
+			return candidateMoves.get(0);
+		}
+		List<Move> copyOfCandidateMoves = new ArrayList<Move>();
+		for (Move move: candidateMoves) {
+			copyOfCandidateMoves.add(move);
+		}
 
 		int maxSoFar = Integer.MIN_VALUE;
 		Move bestMove = null;
@@ -167,7 +161,25 @@ public class Player implements cc2.sim.Player {
 		int i = 0;
 		int repeat = 0;
 		int prevDiff = Integer.MIN_VALUE;
-		for (Move move: candidateMoves) {
+		List<Move> oppMovesHere = new ArrayList<Move>();
+		Iterator<Move> iter = candidateMoves.iterator();
+
+		System.out.println("Found " + candidateMoves.size() + " moves to choose from");
+		while(iter.hasNext()) {
+
+			Move move = iter.next();
+
+			Point thisPoint = move.point;
+			int shapeIndex = 11;
+			while (shapeIndex >= 8) {
+				oppMovesHere.addAll(cutShapes(dough, shapeIndex, opponent_shapes));
+				shapeIndex -= 3;
+			}
+			if (oppMovesHere.isEmpty()) {
+				iter.remove();
+				System.out.println("removing this move. now left with " + candidateMoves.size());
+				continue;
+			}
 
 			int oppScore = computeMoveScore(dough, opponent_shapes, move);
 			int myScore = computeMoveScore(dough, shapes, move);
@@ -178,7 +190,7 @@ public class Player implements cc2.sim.Player {
 			if (diff == prevDiff) {
 				repeat++;
 
-				if (repeat > 100) {
+				if (repeat > 10) {
 					System.out.println("Found the same difference over a 100 times! Chuck it");
 					break;
 				}
@@ -192,8 +204,12 @@ public class Player implements cc2.sim.Player {
 				}
 			}
 			prevDiff = diff;
+			if (i == Math.min(100, candidateMoves.size()/10))
+				break;
 		}
 		System.out.println("Max difference seen: " + maxSoFar);
+		if (bestMove == null)
+			return copyOfCandidateMoves.get(0);
 		return bestMove;
 	}
 
