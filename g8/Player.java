@@ -141,18 +141,18 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 						System.out.println("no common moves");
 						if (!destructiveMoves.isEmpty()) 
 						{
-							nextMove = popRandom(destructiveMoves);
+							nextMove = getBestMove(destructiveMoves, dough, shapes, opponent_shapes);
 						}
 						else
 						{
-							nextMove = popRandom(neighborMoves);
+							nextMove = getBestMove(neighborMoves, dough, shapes, opponent_shapes);
 						}
 					}
 					else
 					{
 						System.out.println("selecting common move");
 						if (!commonMoves.isEmpty()) {
-							nextMove = popRandom(commonMoves);
+							nextMove = getBestMove(commonMoves, dough, shapes, opponent_shapes);
 						}
 					}
 
@@ -562,6 +562,77 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 					return new Point(p.i, p.j + 1);
 		}
 		return new Point(i, j);
+	}
+
+	private Move getBestMove(List<Move> candidateMoves, Dough dough, Shape[] shapes, Shape[] opponent_shapes) {
+
+		int maxSoFar = Integer.MIN_VALUE;
+		Move bestMove = null;
+		// System.out.println("Number of moves to check: " + candidateMoves.size());
+		int i = 0;
+		int repeat = 0;
+		int prevDiff = Integer.MIN_VALUE;
+		for (Move move: candidateMoves) {
+
+			int oppScore = computeMoveScore(dough, opponent_shapes, move);
+			int myScore = computeMoveScore(dough, shapes, move);
+			
+			System.out.println(++i + " My score: " + myScore + " and opponent's score: " + oppScore);
+			
+			int diff = myScore - oppScore;
+			if (diff == prevDiff) {
+				repeat++;
+
+				if (repeat > 100) {
+					System.out.println("Found the same difference over a 100 times! Chuck it");
+					break;
+				}
+			}
+			else {
+				repeat = 0;
+
+				if (diff > maxSoFar) {
+					maxSoFar = myScore - oppScore;
+					bestMove = move;
+				}
+			}
+			prevDiff = diff;
+		}
+		System.out.println("Max difference seen: " + maxSoFar);
+		return bestMove;
+	}
+
+	private int computeMoveScore(Dough dough, Shape[] shapes, Move thisMove) {
+		Dough dummyDough = new DummyDough(dough.side());
+		boolean[][] dummyDoughState = ((DummyDough)dummyDough).getDough();
+
+		for (int i = 0; i < dough.side(); i++) {
+			for (int j = 0; j < dough.side(); j++) {
+				if (thisMove.point.i == i && thisMove.point.j == j)
+					dummyDoughState[i][j] = true;
+				else 
+					dummyDoughState[i][j] = (dough_cache[i][j] == 1) ? true : false;
+			}
+		}
+
+
+		int[] values = new int[1];
+		int shapeIndex = 11;
+		// int shapeIndex = shapes[thisMove.shape].size();
+		for (int i = 0; i < values.length; i++) {
+			values[i] = cutShapes(dummyDough, shapeIndex, shapes).size();
+			shapeIndex -= 3;
+		}
+
+		int[] weights = {11, 8, 5};
+		// int[] weights = {shapeIndex};
+		int score = 0;
+		for (int i = 0; i < values.length; i++) {
+			score += values[i] * weights[i];
+		}
+
+		return score;
+
 	}
 }
 
