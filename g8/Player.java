@@ -9,8 +9,12 @@ import java.util.*;
 
 public class Player implements cc2.sim.Player {
 
-	private boolean[] row_2 = new boolean [0];
+	private boolean firstCheck = true;
 	private static int offset = 0;
+	private boolean[] row_2 = new boolean [0];
+	private int[] count =  new int[3];
+	private Shape curShape;
+	private List<Shape> used_shapes = new ArrayList<Shape>(); 
 	private Random gen = new Random();
 	private static int[][] dough_cache;
 	private HashMap<Move, Shape> move_rotation = new HashMap<Move, Shape>();
@@ -19,62 +23,43 @@ public class Player implements cc2.sim.Player {
 	private int run = 0;
 	private static int shapeIndex = 11;
 
-public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
+	public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 	{
-		// check if first try of given cutter length
 		Point[] cutter = new Point [length];
-		Map<Integer, List<Integer>> pairs = new HashMap<Integer, List<Integer>>();
-		
+		ShapeGen sg = new ShapeGen();
+
+
+		// first time picking shape
 		if (row_2.length != cutter.length - 1) {
-			// save cutter length to check for retries
 			row_2 = new boolean [cutter.length - 1];
-
 			if (length == 11) {
-				pairs.put(0, Arrays.asList(0,3,4));
-				pairs.put(1, Arrays.asList(0, 1, 2, 3, 4));
-				pairs.put(2, Arrays.asList(1, 2, 3));
-				// pairs.put(3, Arrays.asList(3, 4));	
+				curShape = sg.elevenShape(length, count[0]);
+				count[0]++;
 			}
-
 			else if (length == 8) {
-				pairs = createDynamicShape(opponent_shapes[0], 8);
-
+				curShape = sg.createDynamicShape(opponent_shapes[0], length);
+				count[1]++;
+				used_shapes.add(curShape);
 			}
 			else {
-				pairs = createDynamicShape(opponent_shapes[0], 5);
+				curShape = sg.createDynamicShape(opponent_shapes[0], length);
+				count[2]++;
+				used_shapes.add(curShape);
 			}
-			
 		}
+		// backup shapes
 		else {
-			if (length == 5) {
-				pairs.put(0, Arrays.asList(0));
-				pairs.put(1, Arrays.asList(0,1));
-				pairs.put(2, Arrays.asList(0));
-				pairs.put(3, Arrays.asList(0));
-			}
-			else if (length == 8) {
-				pairs.put(0, Arrays.asList(0));
-				pairs.put(1, Arrays.asList(0));
-				pairs.put(2, Arrays.asList(0));
-				pairs.put(3, Arrays.asList(0));
-				pairs.put(4, Arrays.asList(0));
-				pairs.put(5, Arrays.asList(0,1));
-				pairs.put(6, Arrays.asList(0));
+			if (length == 11) {
+				curShape = sg.elevenShape(length, count[0]);
 
+				count[0]++;
 			}
+			else {
+				curShape = sg.changeShape(curShape, used_shapes);
+			}	
+			used_shapes.add(curShape);
 		}
-
-		int i = 0;
-		while (i < cutter.length) {
-			for (Map.Entry<Integer, List<Integer>> pair: pairs.entrySet()) {
-				for (int j : pair.getValue()) {
-					cutter[i] = new Point(pair.getKey(), j);
-					i++;
-				}
-			}
-		}
-
-		return new Shape(cutter);
+		return curShape;
 	}
 
 
@@ -103,7 +88,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 			convex_hull = convexHull(opponent_move, dough);
 			neighbors = getNeighbors(opponent_move);
 		}
-		
+
 		while(true)
 		{	
 			if(dough.uncut())
@@ -276,7 +261,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 			}
 		}
 		return moves;
- 	}
+	}
 
 	private List<Move> cutShapes(Dough dough, int index, Shape[] shapes) {
 		int oddRow = 0;
@@ -333,7 +318,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 		{
 			int m = dough_cache.length;
 			int n = (point.i > 0 ? 1 : 0) + (point.i < m ? 1 : 0)
-			      + (point.j > 0 ? 1 : 0) + (point.j < m ? 1 : 0);
+					+ (point.j > 0 ? 1 : 0) + (point.j < m ? 1 : 0);
 			if (point.i > 0) neighbors.add(new Point(point.i - 1, point.j));
 			if (point.i < m) neighbors.add(new Point(point.i + 1, point.j));
 			if (point.j > 0) neighbors.add(new Point(point.i, point.j - 1));
@@ -349,7 +334,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 		int minWidth = Integer.MAX_VALUE;
 		int maxLength = Integer.MIN_VALUE;
 		int maxWidth = Integer.MIN_VALUE;
-		
+
 		int centroid_x = 0;
 		int centroid_y = 0;
 		for(Point p : opponent_moves)
@@ -366,7 +351,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 		maxWidth = (int)(centroid_x+(side_length/2.0)) < dough.side()? (int)(centroid_x+(side_length/2.0)) : dough.side();
 		minLength = (int)(centroid_y-(side_length/2.0)) > 0? (int)(centroid_y-(side_length/2.0)): 0;
 		maxLength = (int)(centroid_y+(side_length/2.0)) < dough.side() ? (int)(centroid_y+(side_length/2.0)) : dough.side();
-		
+
 		System.out.println("maxlength: "+ maxLength);
 		for(int i = minWidth; i < maxWidth; i++)
 		{
@@ -422,7 +407,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 				newblock[i + 2][j + 2] = block[i][j];
 			}
 		}
-		
+
 		for (int i = 0; i < newblock.length; i++) {
 			for (int j = 0; j < newblock[i].length; j++) {
 				System.out.print(newblock[i][j] + " ");
@@ -449,9 +434,9 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 				points.add(new Point(0, 5));
 				points.add(new Point(0, 6));
 				points.add(new Point(0, 7));
-				
+
 			}
-			
+
 		}
 		else {
 			points = createShape(newblock, n, points, 2);
@@ -506,7 +491,7 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 								Point p = new Point(i, j);
 								cutout[i][j] = true;
 								points.add(p);
-								
+
 								Point new_p = returnAdjPoint(cutout, points, i, j);
 								cutout[new_p.i][new_p.j] = true;
 								points.add(new_p);
@@ -576,9 +561,9 @@ public Shape cutter(int length, Shape[] shapes, Shape[] opponent_shapes)
 
 			int oppScore = computeMoveScore(dough, opponent_shapes, move);
 			int myScore = computeMoveScore(dough, shapes, move);
-			
+
 			System.out.println(++i + " My score: " + myScore + " and opponent's score: " + oppScore);
-			
+
 			int diff = myScore - oppScore;
 			if (diff == prevDiff) {
 				repeat++;
