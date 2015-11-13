@@ -60,15 +60,6 @@ public class ShapeGen {
 		Map<Integer, List<Integer>> pairs = new HashMap<Integer, List<Integer>>();
 
 		Shape newShape = shape;
-		/*Map<Integer, List<Integer>> newpairs = new HashMap<Integer, List<Integer>>();
-		newpairs.put(0, Arrays.asList(0, 1, 2));
-		newpairs.put(1, Arrays.asList(0, 2));
-		
-
-		if (shape.size() == 5 && !shape.equals(returnShape(newpairs, shape.size()))) {
-			newShape = returnShape(newpairs, shape.size());
-		}
-		else {*/
 
 			Shape s;
 			if (shape.size() == 8) {
@@ -82,7 +73,8 @@ public class ShapeGen {
 
 			newShape = s;
 			boolean match = false;
-			int i = shape.size() - 1;
+			//int i = shape.size() - 1;
+			int i = 0, j = 0, k = 1;
 			for (Shape n : used_shapes) {
 				if (n.equals(newShape)) {
 					match = true;
@@ -101,10 +93,45 @@ public class ShapeGen {
 				else if (shape.size() == 5 && pairs.get(0).contains(shape.size() - 1)) {
 					pairs.put(0, Arrays.asList(0, 1, 2, 3));
 				}
-				pairs.put(1, Arrays.asList(i - 1));
-
-				i--;
+				if (i % 2 == 0) {
+					pairs.put(1, Arrays.asList(j));
+					k++;
+				}
+				else {
+					pairs.put(1, Arrays.asList(shape.size() - k));
+					j++;
+				}
+				i++;
+				/*if (j == 0) {
+					pairs.put(1,  Arrays.asList(j));
+				}
+				else if (j % 2 == 0) {
+					pairs.put(1, Arrays.asList(j - 1));
+				}
+				else {
+					pairs.put(1,  Arrays.asList(shape.size() - ))
+				}*/
+				/*if (shape.size() == 8) {
+					if (i % 2 != 0) {
+						pairs.put(1, Arrays.asList(shape.size() - i));
+					}
+					else {
+						pairs.put(1, Arrays.asList(j));
+						j++;
+					}
+				}
+				if (i % 2 != 0) {
+					System.out.println("i 1 : " + i);
+					pairs.put(1, Arrays.asList(shape.size() - k));
+					k--;
+				}
+				else {
+					System.out.println("i2: " + i);
+					
+				}
+				i--;*/
 				newShape = returnShape(pairs, shape.size());
+				System.out.println("NEW SHAPE : " + newShape);
 
 				for (Shape n : used_shapes) {
 					if (n.equals(newShape)) {
